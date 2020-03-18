@@ -120,25 +120,6 @@ sub new {
     return $self;
 }
 
-=head2 binding_matrix
-
-  Example    : my $binding_matrix = $bmf->binding_matrix();
-  Description: Getter for the BindingMatrix object
-  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub binding_matrix {
-    my $self = shift;
-    deprecate('binding_matrix has been deprecated and will be removed in ' .
-        'release 101. Please use get_BindingMatrix instead.'
-    );
-    return $self->get_BindingMatrix;
-}
-
 =head2 get_BindingMatrix
 
   Example    : my $binding_matrix = $bmf->get_BindingMatrix();

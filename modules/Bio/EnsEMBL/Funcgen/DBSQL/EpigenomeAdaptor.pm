@@ -94,12 +94,6 @@ sub fetch_by_production_name {
   return $self->generic_fetch('eg.production_name = ?')->[0];
 }
 
-sub fetch_by_display_label {
-  my ($self, $name) = @_;
-  deprecate("'fetch_by_display_label' has been deprecated. Please use 'fetch_by_short_name' instead. 'fetch_by_display_label' will be removed in release 101.");
-  return fetch_by_short_name($self, $name);
-}
-
 sub fetch_by_short_name {
   my ($self, $name) = @_;
   throw("Must specify the short name of an Epigenome") if ! defined $name;

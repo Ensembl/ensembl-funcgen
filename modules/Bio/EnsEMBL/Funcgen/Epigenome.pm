@@ -169,24 +169,6 @@ sub gender {  return $_[0]->{gender}; }
 
 sub description {  return $_[0]->{description}; }
 
-
-=head2 display_label
-
-  Example    : my $display_label = $epigenome->display_label();
-  Description: Getter of display_label attribute for Epigenome objects.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub display_label {  
-  deprecate("'display_label' has been deprecated. Please use 'short_name' instead. 'display_label' will be removed in release 101.");
-  return short_name(@_); 
-
-}
-
 =head2 short_name
 
   Example    : my $short_name = $epigenome->short_name();

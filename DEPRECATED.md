@@ -70,7 +70,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::**SegmentationStateEmission**::*db()*
  - Bio::EnsEMBL::Funcgen::**SegmentationStateStatistic**::*db()*
 
-### To be removed in EnsEMBL Release 101 ###
+### Removed in EnsEMBL Release 101 ###
 
  - Bio::EnsEMBL::Funcgen::**BindingMatrixFrequencies**::*binding_matrix*
  - Bio::EnsEMBL::Funcgen::**MotifFeature**::*binding_matrix*
