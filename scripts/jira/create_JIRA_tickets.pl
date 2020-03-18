@@ -425,7 +425,6 @@ sub create_ticket {
     my $endpoint = 'rest/api/latest/issue';
 
     my $content = { 'fields' => $ticket };
-    use Data::Printer; p $content;
     my $response = post_request( $endpoint, $content, $parameters, $logger );
 
     return decode_json( $response->content() )->{'key'};
