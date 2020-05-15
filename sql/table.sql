@@ -1659,6 +1659,7 @@ INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'func
 
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '101');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_100_101_a.sql|schema_version');
 
 /**
 @table meta_coord
