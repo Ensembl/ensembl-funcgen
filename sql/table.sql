@@ -1658,7 +1658,9 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'funcgen', NULL);
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '101');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '102');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_101_102_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_101_102_b.sql|Drop underlying_structure table');
 
 /**
 @table meta_coord
@@ -1998,26 +2000,5 @@ CREATE TABLE `unmapped_object` (
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-/**
-@table underlying_structure
-@desc Associates regulatory features to motif features
-@colour  #000000
-
-@column underlying_structure_id    Internal identifier.
-@column regulatory_feature_id      Foreign key references to the @link regulatory_feature table.
-@column motif_feature_id           Foreign key references to the @link motif_feature table.
-
-@see regulatory_feature
-@see underlying_structure
-*/
-
-DROP TABLE IF EXISTS `underlying_structure`;
-CREATE TABLE `underlying_structure` (
-  `underlying_structure_id` int(11) NOT NULL AUTO_INCREMENT,
-  `regulatory_feature_id` int(11) UNSIGNED NOT NULL,
-  `motif_feature_id` int(11) UNSIGNED NOT NULL,
-  PRIMARY KEY (`underlying_structure_id`)
-)ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
