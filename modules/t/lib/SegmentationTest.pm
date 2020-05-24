@@ -38,19 +38,24 @@ use parent qw(Bio::EnsEMBL::Funcgen::Test);
 sub define_expected :Test(setup) {
     my $self = shift;
 
+    my $segmentation_adaptor = $self->{funcgen_db}->get_adaptor('Segmentation');
+
     $self->{expected} = {
         'dbID'                => 1,
         'name'                => 'encode_ctcf',
         'class'               => 'ctcf',
         'superclass'          => 'encode',
         'regulatory_build_id' => undef,
+        'adaptor'             => $segmentation_adaptor,
+        'db'                  => $segmentation_adaptor
     };
 }
 
 sub dbIDs_to_fetch {return [ 1 ];}
 
 sub getters_setters {
-    return [ 'dbID', 'name', 'class', 'superclass', 'regulatory_build_id' ]
+    return [ 'dbID', 'name', 'class', 'superclass', 'regulatory_build_id',
+             'adaptor', 'db' ]
 }
 
 1;
