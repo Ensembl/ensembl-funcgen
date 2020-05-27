@@ -26,3 +26,4 @@
 13074	0	alignment	/funcgen/alignment/095/signal_files/bigwig/Roadmap_Epigenomics/IMR_90/CEBPB/2146_IMR_90_CEBPB_Roadmap_Epigenomics_no_duplicates.bw	BIGWIG	\N
 12676	0	alignment	/funcgen/alignment/095/signal_files/bigwig/ENCODE/HepG2/CEBPB/2148_HepG2_CEBPB_ENCODE_no_duplicates.bw	BIGWIG	\N
 12602	0	alignment	/funcgen/alignment/095/signal_files/bigwig/ENCODE/GM12878/CEBPB/1744_GM12878_CEBPB_ENCODE_no_duplicates.bw	BIGWIG	\N
+23634	1	segmentation_file	/funcgen/segmentation_file/M1_CB.bb	BIGBED	c142f681a6806fde296172c54ad03e5a
