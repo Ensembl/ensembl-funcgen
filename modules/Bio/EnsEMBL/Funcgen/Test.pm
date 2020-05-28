@@ -103,8 +103,6 @@ sub _creation :Test(1) {
 
 sub parameters :Test(setup) {
     my $self = shift;
-
-    $self->{mandatory_constructor_parameters} = {};
 }
 
 sub define_expected :Test(setup){
@@ -152,12 +150,11 @@ sub constructor :Test(no_plan) {
 
     my $full_class = $self->{full_class};
 
-    if ($self->{mandatory_constructor_parameters}){
-        my %mandatory_parameters = %{$self->{mandatory_constructor_parameters}};
-
+    if (exists $self->{constructor_parameters}){
         my $new_object = $full_class->new(%{$self->{constructor_parameters}});
         isa_ok($new_object, $full_class);
 
+        my %mandatory_parameters = %{$self->{mandatory_constructor_parameters}};
         my %incomplete_parameter_set;
         for my $parameter (keys %mandatory_parameters) {
             %incomplete_parameter_set = %mandatory_parameters;
