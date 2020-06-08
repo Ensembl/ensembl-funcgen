@@ -195,7 +195,7 @@ sub get_RegulatoryEvidenceLink {
   }
 
   $self->{'_regulatory_evidence_link'} = $self
-    ->db
+    ->adaptor
     ->db
     ->get_RegulatoryEvidenceLinkAdaptor
     ->fetch_all_by_RegulatoryActivity($self);

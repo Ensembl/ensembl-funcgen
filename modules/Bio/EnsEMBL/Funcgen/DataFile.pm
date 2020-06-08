@@ -100,7 +100,7 @@ sub relative_ftp_site_path {
 
 sub _delete_from_db {
     my $self = shift;
-    $self->db->_delete($self);
+    $self->adaptor->_delete($self);
 }
 
 =head2 file_type
