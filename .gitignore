@@ -40,3 +40,5 @@ bioperl*.zip
 /.settings
 /.includepath
 *delme*
+.idea
+/_Deparsed_XSubs.pm
