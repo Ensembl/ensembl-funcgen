@@ -68,7 +68,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::**Segmentation**::*db()*
  - Bio::EnsEMBL::Funcgen::**SegmentationStateAssignment**::*db()*
  - Bio::EnsEMBL::Funcgen::**SegmentationStateEmission**::*db()*
- - Bio::EnsEMBL::Funcgen::**SegmentationStateStatistic**::*db()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStatistic**::*db()*
 
 ### Removed in EnsEMBL Release 101 ###
 
