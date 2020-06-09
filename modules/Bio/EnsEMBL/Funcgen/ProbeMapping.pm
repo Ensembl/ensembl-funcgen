@@ -66,7 +66,7 @@ sub db {
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 sub gene_build_version  { return shift->_generic_get_or_set('gene_build_version',  @_); }
 sub five_prime_utr      { return shift->_generic_get_or_set('five_prime_utr',      @_); }

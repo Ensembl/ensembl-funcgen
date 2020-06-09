@@ -74,7 +74,7 @@ sub db {
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 
 sub read_file_id                 { return shift->_generic_get_or_set('read_file_id',                 @_); }

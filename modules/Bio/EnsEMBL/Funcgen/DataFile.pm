@@ -64,7 +64,7 @@ sub db {
             . "\n"
             . 'Please use ' . ref($self) . '::adaptor instead.'
     );
-    return $self->adaptor();
+    return $self->adaptor(@_);
 }
 sub table_id     { return shift->_generic_get_or_set('table_id',     @_); }
 sub table_name   { return shift->_generic_get_or_set('table_name',   @_); }
@@ -100,7 +100,7 @@ sub relative_ftp_site_path {
 
 sub _delete_from_db {
     my $self = shift;
-    $self->db->_delete($self);
+    $self->adaptor->_delete($self);
 }
 
 =head2 file_type

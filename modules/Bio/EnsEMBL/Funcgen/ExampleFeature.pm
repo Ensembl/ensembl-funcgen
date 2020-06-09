@@ -61,7 +61,7 @@ sub db {
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 
 sub ensembl_object_type { return shift->_generic_get_or_set('ensembl_object_type', @_); }
