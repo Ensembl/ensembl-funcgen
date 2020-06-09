@@ -81,7 +81,7 @@ sub db {
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 sub experiment_id { return shift->_generic_get_or_set('experiment_id', @_); }
 sub max_peaks     { return shift->_generic_get_or_set('max_peaks',     @_); }

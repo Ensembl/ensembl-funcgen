@@ -60,7 +60,7 @@ sub db {
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 sub statistic { return shift->_generic_get_or_set('statistic',  @_); }
 sub value     { return shift->_generic_get_or_set('value',      @_); }

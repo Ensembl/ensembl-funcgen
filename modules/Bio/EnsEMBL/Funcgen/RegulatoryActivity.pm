@@ -94,15 +94,14 @@ sub db {
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 
 sub adaptor { 
   
   my $self = shift;
-  my $value = shift;
 
-  my $adaptor = $self->_generic_get_or_set('adaptor', $value);
+  my $adaptor = $self->_generic_get_or_set('adaptor', @_);
   
   if (defined $adaptor) {
     return $adaptor;

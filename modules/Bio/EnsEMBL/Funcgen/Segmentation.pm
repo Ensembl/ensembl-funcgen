@@ -62,7 +62,7 @@ sub db {
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 sub name                { return shift->_generic_get_or_set('name',                @_); }
 sub class               { return shift->_generic_get_or_set('class',               @_); }

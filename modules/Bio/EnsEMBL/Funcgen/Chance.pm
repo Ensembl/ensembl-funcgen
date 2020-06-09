@@ -75,7 +75,7 @@ sub db {
       . "\n"
       . 'Please use ' . ref($self) . '::adaptor instead.'
   );
-  return $self->adaptor();
+  return $self->adaptor(@_);
 }
 
 sub chance_id                                                       { return shift->_generic_get_or_set('chance_id',               @_); }

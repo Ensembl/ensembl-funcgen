@@ -77,7 +77,7 @@ sub db {
             . "\n"
             . 'Please use ' . ref($self) . '::adaptor instead.'
     );
-    return $self->adaptor();
+    return $self->adaptor(@_);
 }
 sub peak_calling_id   { return shift->_generic_get_or_set('peak_calling_id',   @_);}
 
