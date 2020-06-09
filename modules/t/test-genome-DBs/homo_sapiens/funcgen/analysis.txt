@@ -1,4 +1,5 @@
 16	0000-00-00 00:00:00	Regulatory_Build	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
 67	2014-01-27 15:58:33	TarBase	\N	8.0	\N	\N	\N	\N	\N	\N	\N	\N	\N
 68	2014-04-25 16:05:23	SWEmbl_R0005	\N	\N	\N	SWEmbl	3.5	SWEmbl	-f 150 -R 0.0005 -d 150	Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::SWEmbl	\N	\N	\N
+120	2016-06-21 18:06:58	Segmentation
 134	2018-09-05 14:40:14	remove_duplicates	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
