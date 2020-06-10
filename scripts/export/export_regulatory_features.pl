@@ -155,7 +155,7 @@ sub create_file_and_serialiser {
   if (! defined $epigenome) {
     die("Can't find epigenome with name " . $epigenome_name);
   }
-  $logger->info("Exporting regulatory features for " . $epigenome->display_label ."\n");
+  $logger->info("Exporting regulatory features for " . $epigenome->short_name ."\n");
 
   my $regulatory_activity_serialiser = sub {
     my @row  = @{ shift @_ };

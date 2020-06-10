@@ -829,18 +829,18 @@ sub fetch_metadata {
       }
     
       my $epigenome = $peak_calling->fetch_Epigenome;
-      my $cell_display_label = $epigenome->display_label;
+      my $cell_short_name = $epigenome->short_name;
 
       my $epigenome_is_excluded =
-           ($cell_display_label eq "CD38- naïve B cell (CB)")
-        || ($cell_display_label eq "CD38- naive B cell (VB)")
-        || ($cell_display_label eq "CD4+ ab T cell (CB)")
-        || ($cell_display_label eq "CD8+ ab T cell (VB)")
-        || ($cell_display_label eq "EM CD8+ ab T cell (VB)")
-        || ($cell_display_label eq "Naïve B cell (To)")
+           ($cell_short_name eq "CD38- naïve B cell (CB)")
+        || ($cell_short_name eq "CD38- naive B cell (VB)")
+        || ($cell_short_name eq "CD4+ ab T cell (CB)")
+        || ($cell_short_name eq "CD8+ ab T cell (VB)")
+        || ($cell_short_name eq "EM CD8+ ab T cell (VB)")
+        || ($cell_short_name eq "Naïve B cell (To)")
       ;
       if ($epigenome_is_excluded) {
-        print_log("Skipping $cell_display_label, because it has been excluded from the regulatory build.\n");
+        print_log("Skipping $cell_short_name, because it has been excluded from the regulatory build.\n");
         next PEAK_CALLING;
       }
 
@@ -1056,9 +1056,7 @@ sub fetch_tss {
   foreach my $slice (@$all_toplevel_slices) {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
-      
         $tss_id += 1;
-      
         if ($transcript->strand() > 0) {
           push @tss_coords, [
               $slice->seq_region_name(), 
