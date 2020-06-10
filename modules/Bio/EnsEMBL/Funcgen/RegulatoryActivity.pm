@@ -46,7 +46,7 @@ limitations under the License.
 
   foreach my $current_regulatory_activity (@$regulatory_activity_list) {
     print "The activity in the epigenome "
-      . $current_regulatory_activity->get_Epigenome->display_label
+      . $current_regulatory_activity->get_Epigenome->short_name
       . ' is: '
       . $current_regulatory_activity->activity
       . "\n";
@@ -271,7 +271,7 @@ sub summary_as_hash {
 
   return {
     regulatory_feature_stable_id => $regulatory_feature->stable_id,
-    epigenome           => $epigenome->display_label,
+    epigenome           => $epigenome->short_name,
     source              => $regulatory_feature->analysis->logic_name,
     bound_start         => $regulatory_feature->bound_seq_region_start,
     bound_end           => $regulatory_feature->bound_seq_region_end,
@@ -280,7 +280,7 @@ sub summary_as_hash {
     strand              => $regulatory_feature->strand,
     seq_region_name     => $regulatory_feature->seq_region_name,
     activity            => $self->activity,
-    description         => $feature_type->name . ' ' . lc($self->activity) . ' in ' . $epigenome->display_label,
+    description         => $feature_type->name . ' ' . lc($self->activity) . ' in ' . $epigenome->short_name,
     feature_type        => $feature_type->name,
   };
 }

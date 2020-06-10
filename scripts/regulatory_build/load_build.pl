@@ -765,7 +765,7 @@ sub process_regulatory_build_file {
 sub load_celltype_activity {
   my ($base_dir, $cell_type, $regulatory_features) = @_;
 
-  print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
+  print_log("\tProcessing data from cell type " . $cell_type->short_name . " (". $cell_type->name .")" . "\n");
 
   #my $cell_type_name = clean_name($cell_type->production_name);
   my $cell_type_name = $cell_type->production_name;

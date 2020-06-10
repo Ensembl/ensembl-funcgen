@@ -55,10 +55,6 @@ sub bwa_index_by_species_assembly {
   my $species  = shift;
   my $assembly = shift;
   
-  if ($species eq 'mus_musculus') {
-    return 'mus_musculus/mus_musculus.deleteme/primary_assembly/Mus_musculus.GRCm38.dna.primary_assembly.fa'
-  }
-
   return $species . '/' . $assembly . '/genome_index/bwa/' . $assembly;
 }
 

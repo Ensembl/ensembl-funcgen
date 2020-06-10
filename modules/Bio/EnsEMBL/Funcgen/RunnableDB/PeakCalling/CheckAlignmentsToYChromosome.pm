@@ -13,7 +13,12 @@ sub run {
   my $species       = $self->param_required('species');
   my $plan          = $self->param_required('execution_plan');
   my $data_root_dir = $self->param_required('data_root_dir');
-  
+
+  #This analysis will only run on Human
+  if ($species ne 'homo_sapiens') {
+    return;
+  }
+
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
