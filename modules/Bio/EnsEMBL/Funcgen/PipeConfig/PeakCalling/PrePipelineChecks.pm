@@ -11,12 +11,23 @@ sub pipeline_analyses {
     return [
         {   -logic_name  => 'start_pre_pipeline_checks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-            -flow_into   => {
+ 	    -flow_into   => {
                'MAIN->A' => [
                 'pre_pipeline_checks',
                 'registration_checks',
+		'check_applied_db_patches',
                ],
                'A->MAIN' => 'truncate_execution_plan_table',
+            },        
+	},
+        {   -logic_name  => 'check_applied_db_patches',
+            -module      => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+            -max_retry_count  => 0,
+            -parameters => {
+                registry_file    => '#reg_conf#',
+                species          => '#species#',
+                group            => 'funcgen',
+                datacheck_names  => ['SchemaPatchesApplied'],
             },
         },
         {
@@ -71,9 +82,6 @@ sub pipeline_analyses {
                       "Polymerase"
                     )
                 ',
-#                  and (experiment.name like "K562%")
-#                    and (experiment.name like "Lung%" or experiment.name like "HepG2%")
-
             },
             -flow_into => {
                2 => { 'create_execution_plan' => INPUT_PLUS },
