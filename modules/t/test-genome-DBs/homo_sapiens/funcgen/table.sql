@@ -136,7 +136,7 @@ CREATE TABLE `binding_matrix` (
   PRIMARY KEY (`binding_matrix_id`),
   UNIQUE KEY `name_idx` (`name`),
   UNIQUE KEY `stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=582 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=583 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `binding_matrix_frequencies` (
   `binding_matrix_frequencies_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -191,7 +191,7 @@ CREATE TABLE `data_file` (
   PRIMARY KEY (`data_file_id`),
   UNIQUE KEY `table_id_name_path_idx` (`table_id`,`table_name`,`path`),
   UNIQUE KEY `data_file_id` (`data_file_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=13649 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=23635 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `epigenome` (
   `epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -382,7 +382,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=782 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=784 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -743,7 +743,7 @@ CREATE TABLE `segmentation` (
   `superclass` varchar(255) NOT NULL,
   `class` varchar(255) NOT NULL,
   PRIMARY KEY (`segmentation_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `segmentation_cell_tables` (
   `superclass` varchar(255) NOT NULL,
@@ -766,7 +766,7 @@ CREATE TABLE `segmentation_file` (
   UNIQUE KEY `name_idx` (`name`),
   KEY `epigenome_idx` (`epigenome_id`),
   KEY `analysis_idx` (`analysis_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `segmentation_state_assignment` (
   `segmentation_state_assignment_id` int(35) unsigned NOT NULL AUTO_INCREMENT,
@@ -835,13 +835,6 @@ CREATE TABLE `transcription_factor_complex_composition` (
   KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`),
   KEY `transcription_factor_id_idx` (`transcription_factor_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=369 DEFAULT CHARSET=latin1;
-
-CREATE TABLE `underlying_structure` (
-  `underlying_structure_id` int(11) NOT NULL AUTO_INCREMENT,
-  `regulatory_feature_id` int(11) unsigned NOT NULL,
-  `motif_feature_id` int(11) unsigned NOT NULL,
-  PRIMARY KEY (`underlying_structure_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE `unmapped_object` (
   `unmapped_object_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
