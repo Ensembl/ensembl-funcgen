@@ -1,0 +1,20 @@
+Directories
+===========
+
+working_dir
+^^^^^^^^^^^
+
+Root. All temporary files are written here or in a subdirectory.
+Location defined by user through command line argument.
+**All further locations are under working_dir, unless stated otherwise**
+
+celltype_tf
+^^^^^^^^^^^
+Created by *compute_celltype_tf_sites*
+
+
+celltype_dnase
+^^^^^^^^^^^^^^
+Created by *compute_celltype_tf_sites*
+
+

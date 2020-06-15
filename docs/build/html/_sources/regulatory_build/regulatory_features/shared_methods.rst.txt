@@ -1,0 +1,4 @@
+Shared Methods
+##############
+
+Methods used multiple times in the script which are mostly self-explanatory

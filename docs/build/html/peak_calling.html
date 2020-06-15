@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Peak Calling &#8212; Ensembl Regulation 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="peak-calling">
+<h1>Peak Calling<a class="headerlink" href="#peak-calling" title="Permalink to this headline">¶</a></h1>
+<p>Peak calling is a computational method used to identify areas in a genome that have been enriched with aligned reads as a consequence of performing a ChIP-sequencing or MeDIP-seq experiment.
+These areas are those where a protein interacts with DNA.</p>
+<div class="section" id="read-alignment">
+<h2>Read alignment<a class="headerlink" href="#read-alignment" title="Permalink to this headline">¶</a></h2>
+<p>To maintain a standardised peak calling methodology, we start our analyses with raw reads from each experiment. We align reads (replicates are pooled) to the genome using BWA (with default parameters). All matches to the mitochondrial DNA are filtered out to avoid alignment anomalies due to similarities with autosomal regions.</p>
+</div>
+<div class="section" id="id1">
+<h2>Peak calling<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>Peak calling is performed using two algorithms:</p>
+<p>SWEMBL (S. Wilder et al., in preparation):
+When replicates are available, permissive settings (-f 150 -R 0.0005 -d 150) are used, of which we choose the best peaks, so as to fit an IDR score of 0.01. This number of peaks is linearly adjusted to take into account replicate pairs with different numbers of peaks.
+Otherwise, different stringent settings are used for very tight peaks (e.g. DNAse1) (-f 150 -R 0.0025) and larger ones (-f 150 -R 0.015).</p>
+<p>CCAT (Xu et al., 2010)
+The algorithm described by Xu et al, is specifically designed for peak calling of broad features, such as H3K36me3. The parameters were set empirically to (fragmentSize 200; slidingWinSize 150; movingStep 20; isStrandSensitiveMode 0; minCount 10; outputNum 100000; randomSeed 123456; minScore 4.0; bootstrapPass 50).
+Peak filtering</p>
+<p>The ENCODE DAC Blacklist regions are then used to filter the resultant peaks. These regions are stored in the core database as ‘encode_excluded’ MiscFeatures.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Ensembl Regulation</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Thomas Juettemann.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/peak_calling.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

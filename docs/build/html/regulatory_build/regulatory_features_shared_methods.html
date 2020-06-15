@@ -1,0 +1,231 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Shared Methods &mdash; Ensembl Regulation 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Directories" href="regulatory_features_directories.html" />
+    <link rel="prev" title="Regulatory Build" href="regulatory_features_main.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Ensembl Regulation
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Regulatory Build</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="peak_calling.html">Peak Calling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regulatory_features_main.html">Regulatory Build</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Shared Methods</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#must-compute">must_compute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#convert-to-bigbed">convert_to_bigBed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run">run</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="regulatory_features_directories.html">Directories</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regulatory_features_input.html">Input Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regulatory_features_tools.html">Tools</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Ensembl Regulation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Shared Methods</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/regulatory_build/regulatory_features_shared_methods.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="shared-methods">
+<h1>Shared Methods<a class="headerlink" href="#shared-methods" title="Permalink to this headline">¶</a></h1>
+<p>Methods used multiple times in the script which are mostly self-explanatory</p>
+<div class="section" id="must-compute">
+<span id="rf-sm-must-compute"></span><h2>must_compute<a class="headerlink" href="#must-compute" title="Permalink to this headline">¶</a></h2>
+<dl class="simple">
+<dt>Decides whether a computation is needed</dt><dd><ul class="simple">
+<li><p>As long as all checked files exist, they are not recomputed</p></li>
+<li><p>As soon as a checked file needs to be recomputed, everything after that is recomputed</p></li>
+</ul>
+</dd>
+</dl>
+</div>
+<div class="section" id="convert-to-bigbed">
+<span id="rf-sm-convert-to-bigbed"></span><h2>convert_to_bigBed<a class="headerlink" href="#convert-to-bigbed" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="run">
+<span id="rf-sm-run"></span><h2>run<a class="headerlink" href="#run" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="regulatory_features_directories.html" class="btn btn-neutral float-right" title="Directories" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="regulatory_features_main.html" class="btn btn-neutral float-left" title="Regulatory Build" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Thomas Juettemann
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

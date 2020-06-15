@@ -1,0 +1,27 @@
+Regulatory Build
+################
+
+Compute regulatory features based on peak calling and segmentation input.
+The script was written in a time when epigenomes where cell types.
+
+Compute celltype-specific transcription factor binding sites
+************************************************************
+
+
+Methods
+^^^^^^^
+
+compute_celltype_tf_sites
+"""""""""""""""""""""""""
+
+Directories created:
+  * working_dir/celltype_tf
+  * working_dir/celltype_dnase
+
+Iterates through each cell type defined in $options->{cell_type_tfs} (see get_metadata) and calls *compute_celltype_tf_sites_2*.
+
+
+compute_celltype_tf_sites_2
+"""""""""""""""""""""""""""
+
+

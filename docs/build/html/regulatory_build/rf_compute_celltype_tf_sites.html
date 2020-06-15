@@ -1,0 +1,281 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Compute celltype-specific TF binding sites &mdash; Ensembl Regulation 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Shared Methods" href="rf_shared_methods.html" />
+    <link rel="prev" title="Regulatory Features" href="rf_main.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Ensembl Regulation
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../main.html">Overview</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Regulatory Build</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="rb_main.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="peak_calling.html">Peak Calling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="peak_calling.html#read-alignment">Read alignment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="peak_calling.html#id1">Peak calling</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation.html">Segmentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="rf_main.html">Regulatory Features</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Compute celltype-specific TF binding sites</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#compute-celltype-tf-sites">compute_celltype_tf_sites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compute-celltype-tf-sites-2">compute_celltype_tf_sites_2</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rf_shared_methods.html">Shared Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rf_shared_methods.html#must-compute">must_compute</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rf_shared_methods.html#convert-to-bigbed">convert_to_bigBed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rf_shared_methods.html#run">run</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rf_directories.html">Directories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rf_directories.html#working-dir">working_dir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rf_directories.html#celltype-tf">celltype_tf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rf_directories.html#celltype-dnase">celltype_dnase</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rf_input.html">Input Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rf_tools.html">Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rf_tools.html#wiggletools">WiggleTools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rf_tools.html#ucsc-genome-browser-binaries">UCSC Genome Browser binaries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rf_tools.html#bedtools">Bedtools</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Probe Mapping</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../probe_mapping/pm_main.html">Probe Mapping</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Ensembl Regulation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="rf_main.html">Regulatory Features</a> &raquo;</li>
+        
+      <li>Compute celltype-specific TF binding sites</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/regulatory_build/rf_compute_celltype_tf_sites.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="compute-celltype-specific-tf-binding-sites">
+<h1>Compute celltype-specific TF binding sites<a class="headerlink" href="#compute-celltype-specific-tf-binding-sites" title="Permalink to this headline">¶</a></h1>
+<p>Identify transcription factor (TF) binding sites in the genome by running WiggleTools on TF peaks.</p>
+<div class="figure align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/rf_compute_celltype_tf_sites.png"><img alt="workflow compute_celltype_tf_sites" src="../_images/rf_compute_celltype_tf_sites.png" style="width: 607.0px; height: 801.0px;" /></a>
+<p class="caption"><span class="caption-text">Workflow showing how transcription factor bidning sites are calculated.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</div>
+<div class="section" id="compute-celltype-tf-sites">
+<span id="rf-m-compute-celltype-tf-sites"></span><h2>compute_celltype_tf_sites<a class="headerlink" href="#compute-celltype-tf-sites" title="Permalink to this headline">¶</a></h2>
+<dl class="simple">
+<dt>Input</dt><dd><ul class="simple">
+<li><p>$options-&gt;{cell_type_tfs}
+Contains cell types TFs in some format</p></li>
+</ul>
+</dd>
+</dl>
+<p>Creates two directories, <em>celltype_tf</em> and <em>celltype_dnase</em>.
+Iterates through each cell type defined in $options-&gt;{cell_type_tfs} (see get_metadata) and calls <em>compute_celltype_tf_sites_2</em>.</p>
+</div>
+<div class="section" id="compute-celltype-tf-sites-2">
+<span id="rf-m-compute-celltype-tf-sites-2"></span><h2>compute_celltype_tf_sites_2<a class="headerlink" href="#compute-celltype-tf-sites-2" title="Permalink to this headline">¶</a></h2>
+<dl class="simple">
+<dt>Input</dt><dd><ul class="simple">
+<li><p>Transcription Factor peaks</p></li>
+<li><p>Open Chromantin peaks [optional]</p></li>
+</ul>
+</dd>
+<dt>Output</dt><dd><ul class="simple">
+<li><p>working_dir/celltype_tf/$celltype.bed</p></li>
+<li><p>working_dir/celltype_dnase/$celltype.bed [condition: open chromatin peaks]</p></li>
+</ul>
+</dd>
+</dl>
+<p>If open chromatin data exists for this epigenome, create bedgraph containing all open areas. Then overlap with TF data and find all areas where open chromatin and TF signal overlaps (sum &gt; 1). Could also be where either exist.</p>
+<p>If not open chromatin data exist, run only on those.</p>
+<p>All files are trimmed to chromosome length after being created.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="rf_shared_methods.html" class="btn btn-neutral float-right" title="Shared Methods" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="rf_main.html" class="btn btn-neutral float-left" title="Regulatory Features" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Thomas Juettemann
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

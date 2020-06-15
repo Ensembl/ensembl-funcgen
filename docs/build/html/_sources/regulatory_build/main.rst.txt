@@ -1,0 +1,22 @@
+Overview
+########
+
+The Ensembl Regulatory Build (Zerbino et al. 2015) contains a genome-wide set of regions that are likely to be involved in gene regulation. 
+
+The process is divided into
+
+* Registration of metadata
+* Download and QC of sequence data
+* Alignment to the genome
+* Peak calling to identify enriched regions
+* Segmentation
+
+.. toctree::
+  :hidden:
+
+  rf_main
+  rf_tfbs
+  rf_shared_methods
+  rf_directories
+  rf_input
+  rf_tools

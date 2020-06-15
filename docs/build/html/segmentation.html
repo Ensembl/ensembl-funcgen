@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Segmentation &#8212; Ensembl Regulation 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="segmentation">
+<h1>Segmentation<a class="headerlink" href="#segmentation" title="Permalink to this headline">¶</a></h1>
+<p>Segmentation algorithms partition the genome into regions with distinct epigenomic profiles. These are genomic regions of similar signal pattern over a selected number of assays.</p>
+<p>To segment the genome for each cell type we currently use either ChromHMM (Ernst et al., 2011) or Segway (Hoffman et al., 2011). These algorithms detect recurring signal patterns, called states, from a collection of genome-wide assays, such as DNase-seq and ChIP-seq, across the different cell types. They then assign a state to each basepair per epigenome. Following this stage, the 25 states are assigned a functional label, including CTCF, Distal, Heterochromatin, Open Chromatin, Transcription Factor Binding Site, Gene, Predicted Weak enhancer/Cis-reg element, Proximal, Tss, Poised and Repressed, based on a decision tree.</p>
+<p>ChromHMM uses a multivariate hidden Markov Model, training on the binary presence or absence of signal for each assay in 200 base pair bins over the whole genome. Segway runs a dynamic Bayesian network algorithm using real-valued signal data, trained over the ENCODE pilot regions (1% of the genome), and fitted over the whole genome.
+For the currect release we use ChromHMM with 25 epigenomic states with 200 bp resolution. The human genome segmentation is based on ENCODE (ENCODE Project Consortium, 2012), Roadmap Epigenomics (Roadmap Epigenomics Consortium, 2015) and BLUEPRINT data. The mouse segmentation is based on Mouse ENCODE (Mouse ENCODE Consortium, 2012) data. The assays were chosen to maximise information content about the state of the genome in each project. These assays (including control input sequencing) were coordinated across all cell types and constituted from three classes of data, which differ across projects due to data availability:</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Ensembl Regulation</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Thomas Juettemann.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/segmentation.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

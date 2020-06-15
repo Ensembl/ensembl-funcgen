@@ -1,0 +1,9 @@
+Segmentation
+^^^^^^^^^^^^
+
+Segmentation algorithms partition the genome into regions with distinct epigenomic profiles. These are genomic regions of similar signal pattern over a selected number of assays.
+
+To segment the genome for each cell type we currently use either ChromHMM (Ernst et al., 2011) or Segway (Hoffman et al., 2011). These algorithms detect recurring signal patterns, called states, from a collection of genome-wide assays, such as DNase-seq and ChIP-seq, across the different cell types. They then assign a state to each basepair per epigenome. Following this stage, the 25 states are assigned a functional label, including CTCF, Distal, Heterochromatin, Open Chromatin, Transcription Factor Binding Site, Gene, Predicted Weak enhancer/Cis-reg element, Proximal, Tss, Poised and Repressed, based on a decision tree.
+
+ChromHMM uses a multivariate hidden Markov Model, training on the binary presence or absence of signal for each assay in 200 base pair bins over the whole genome. Segway runs a dynamic Bayesian network algorithm using real-valued signal data, trained over the ENCODE pilot regions (1% of the genome), and fitted over the whole genome.
+For the currect release we use ChromHMM with 25 epigenomic states with 200 bp resolution. The human genome segmentation is based on ENCODE (ENCODE Project Consortium, 2012), Roadmap Epigenomics (Roadmap Epigenomics Consortium, 2015) and BLUEPRINT data. The mouse segmentation is based on Mouse ENCODE (Mouse ENCODE Consortium, 2012) data. The assays were chosen to maximise information content about the state of the genome in each project. These assays (including control input sequencing) were coordinated across all cell types and constituted from three classes of data, which differ across projects due to data availability:
