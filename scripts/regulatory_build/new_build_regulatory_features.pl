@@ -83,7 +83,7 @@ use File::Basename;
 use File::Temp;
 ${File::Temp::KEEP_ALL} = 1;
 use Storable;
-use Data::Dumper;
+use Data::Dumper::Concise;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Getopt::Long;
@@ -250,7 +250,8 @@ sub get_options {
       -dnadb_dbname => $options->{dnadb_name},
       -dnadb_host   => $options->{dnadb_host},
       -dnadb_pass   => $options->{dnadb_pass},
-      -dnadb_port   => $options->{dnadb_port}
+      -dnadb_port   => $options->{dnadb_port},
+      -reconnect_when_connection_lost => 1,
     );
     $options->{dnadb_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
@@ -260,6 +261,7 @@ sub get_options {
       -pass   => $options->{dnadb_pass},
       -port   => $options->{dnadb_port},
       -species => $options->{species},
+      -reconnect_when_connection_lost => 1,
     );
   }
   return $options;
@@ -325,7 +327,7 @@ sub read_command_line {
 
 sub check_options {
   my $options = shift;
-
+  print Dumper($options);
   die('Output directory not defined')    unless defined $options->{out};
   die('Assembly name not defined')       unless defined $options->{assembly};
   die('Chromosome lengths not provided') unless defined $options->{chrom_lengths};
@@ -1735,8 +1737,9 @@ sub extract_ChromHMM_state_summary {
   }
 
   mkdir "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/";
-
+  
   foreach $cell (@celltypes) {
+
     my $source = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed";
     my $summary = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$cell.bed";
     run("awk \'\$4 == \"$state\" \' $source > $summary") ;
