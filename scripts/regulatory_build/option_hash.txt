@@ -1,0 +1,196 @@
+all_toplevel_slices [fetch_all_toplevel_slices]
+  - fetch_all_toplevel_slices
+
+
+assembly [check_options]
+  - check_options
+  - (make_track_hub)
+  - make_track_hub_headers
+  - make_track_hub_assembly
+  - make_track_hub_overview
+  - (make_track_hub_segmentations)
+  - make_track_hub_segmentations_2
+  - (make_track_hub_segmentation_summaries)
+  - make_track_hub_segmentation_summaries_2
+  - make_track_hub_projected_segmentations
+  - make_track_hub_tfbs
+
+assignments [label_segmentation_states]
+  - label_segmentation_states
+  - dump_assignments 
+
+  - 
+
+cell_type_open [get_metadata.must_compute | load_data_from_file]
+  - get_metadata
+  - !record_peak_file!
+  - (compute_tf_probs)
+  - (compute_celltype_tf_sites)
+  - compute_celltype_tf_sites_2
+  - (compute_antibody_specific_probs)
+  - (compute_antibody_specific_prob)
+  - antibody_regions
+  - (compute_global_tf_prob)
+
+
+
+cell_type_tfs [get_metadata.must_compute | load_data_from_file]
+  - get_metadata
+  - record_peak_file
+  - (compute_tf_probs)
+  - (compute_celltype_tf_sites)
+  - compute_celltype_tf_sites_2
+  - (compute_antibody_specific_probs)
+  - (compute_antibody_specific_prob)
+  - (antibody_regions)
+  - (compute_global_tf_prob)
+
+celltype_dnase [compute_celltype_tf_sites_2]
+  - compute_celltype_tf_sites_2 
+  -> Only used here
+  https://github.com/Ensembl/ensembl-funcgen/blame/release/100/scripts/regulatory_build/new_build_regulatory_features.pl#L1336
+
+
+celltype_tfbs [compute_celltype_tf_sites_2]
+  - compute_celltype_tf_sites_2
+  -> Only used here, 
+  https://github.com/Ensembl/ensembl-funcgen/blame/release/100/scripts/regulatory_build/new_build_regulatory_features.pl#L1348
+
+chrom_lengths [check_options]
+  - check_options
+  - !convert_to_bigBed!
+  - !convert_to_bigWig!
+  - !read_chrom_lengths!
+
+cutoffs [set_cutoffs]
+  - set_cutoffs
+  - print_cutoffs
+  - select_segmentation_cutoffs
+  - (compute_regulatory_features)
+  - !weighted_summary_definition!
+  - 
+
+dump [check_options]
+  - !read_dump!
+  - 
+
+exons [get_metadata.must_compute | load_data_from_file]
+  - get_metadata
+  - !create_exons!
+  - (label_segmentation_states)
+  - (select_segmentation_states)
+  - (compute_overlaps)
+  - (compute_overlap_scores)
+  - compute_overlap_score 
+  - (compute_ChromHMM_repressed_scores)
+  - (compute_GMTK_repressed_scores)
+  - (compute_Segway_repressed_scores)
+
+genome_length [get_metadata.must_compute | load_data_from_file]
+  - get_metadata
+  - !compute_overlap_score!
+  - test_relevance
+
+
+length_hash [compute_genome_length_from_chromosome_length_file]
+  - compute_genome_length_from_chromosome_length_file
+  - !trim_bed_to_chrom_lengths!
+
+
+mask [get_metadata.must_compute | load_data_from_file]
+  - get_metadata
+  - !create_mask!
+  - !compute_regulatory_features!
+  - 
+
+must_compute [must_compute]
+  - must_compute
+
+peak_calls [get_metadata.must_compute | load_data_from_file]
+  - get_metadata
+  - !record_peak_file!
+  - (compute_tf_probs)
+  - (compute_celltype_tf_sites)
+  - (compute_celltype_tf_sites_2)
+  - compute_antibody_specific_probs
+  - (compute_antibody_specific_prob)
+  - antibody_regions
+  - (compute_global_tf_prob)
+  - (label_segmentation_states)
+  - (select_segmentation_states)
+  - (compute_overlaps)
+  - (compute_overlap_scores)
+  - (compute_overlap_score)
+  - (compute_ChromHMM_repressed_scores)
+  - (compute_Segway_repressed_scores)
+
+
+segmentations [get_metadata.must_compute | load_data_from_file]
+  - get_metadata
+  - !set_cutoffs!
+  - !print_cutoffs!
+  - compute_states
+  - (make_track_hub)
+  - (make_track_hub_assembly)
+  - (make_track_hub_overview)
+  - make_track_hub_segmentations
+  - (make_track_hub_segmentations_2)
+  - make_track_hub_segmentation_summaries
+  - (make_track_hub_segmentation_summaries_2)
+  - make_track_hub_projected_segmentations
+  - (make_track_hub_tfbs)
+
+
+
+segmentation 
+ -> Likely typo, only used in method descriptions
+
+selected_states [set_cutoffs | load_data_from_file]
+  - set_cutoffs
+  - !print_cutoffs!
+  - select_segmentation_cutoffs
+  - !select_segmentation_cutoff!
+  - (compute_regulatory_features)
+  - weighted_summary_definition
+
+
+species [get_options]
+  - get_options
+  -> Only used for DB connection
+
+
+tss [get_metadata]
+  - get_metadata
+  - !create_tss!
+  - (label_segmentation_states)
+  - (select_segmentation_states)
+  - (compute_overlaps)
+  - (compute_overlap_scores)
+  - compute_overlap_score
+  - (compute_ChromHMM_repressed_scores)
+  - (compute_GMTK_repressed_scores)
+  - (compute_Segway_repressed_scores)
+  - compute_regulatory_features
+  - compute_ChromHMM_label_state
+  - 
+
+
+
+db_adaptor
+user
+host
+port
+pass
+db
+working_dir
+out
+output_dir
+trackhub_dir
+
+
+dnadb_adaptor
+dnadb_host
+dnadb_name
+dnadb_pass
+dnadb_port
+dnadb_user

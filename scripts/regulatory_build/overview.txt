@@ -1,0 +1,161 @@
+
+compute_tf_probs
+  [Computing TF binding probs]
+
+  compute_celltype_tf_sites
+    [Computing TF binding sites for each cell type]
+
+    compute_celltype_tf_sites_2
+      [Computing TF binding sites for a given cell type]
+
+  compute_antibody_specific_probs
+    [Computing TF binding summaries for each TF]
+
+    compute_antibody_specific_prob
+      [Computing TF binding summaries for a given TF]
+
+
+extract_segmentation_state_summaries
+  [Extracting segmentation summaries Computes for each segmentation and each state the number of celltypes with a given state at each position]
+  Extracting segmentation summaries
+    [Computes for each segmentation and each state the number of celltypes with a given state at each position]
+
+  extract_segmentation_state_summaries_2
+    [Computes for a given segmentation and each state the number of celltypes with a given state at each position]
+
+    extract_ChromHMM_state_summaries
+      extract_ChromHMM_states
+        [Extracting list of states in a ChromHMM segmentation]
+        E1-E25
+      extract_ChromHMM_cells
+        [Extracting list of cell types in a ChromHMM segmentation]
+        A549-
+      extract_ChromHMM_state_summary
+         [Computes for a given ChromHMM, Segway or GMTK segmentation and a given state the number of celltypes with that state at each position]
+
+
+
+
+label_segmentation_states
+  This first label assigns a label to each state of each segmentation, partly to color the segmentations partly to inform the next step.
+  - load_assignments
+   ||
+  - select_segmentation_states
+      [Assigns a label to each state of a given segmentation, partly to color the segmentation  partly to inform the next step]
+      compute_overlaps
+        [Characterising segmentation states with a number of scores]
+
+        compute_overlap_scores
+          [Characterising segmentation states with a score]
+
+          compute_overlap_score
+            [Characterising a segmentation state with a score]
+
+            compute_enrichment_between_files
+              [compute enrichment between two bed files]
+
+        compute_ChromHMM_repressed_scores
+          [Characterising ChromHMM segmentation states with a repression score]
+
+
+      label_segmentation_state
+        Assigns a label to a state of a given segmentation, partly to color the segmentation, partly to inform the next step.
+    dump_assignment
+
+make_segmentation_bedfiles
+  make_segmentation_bedfiles_2
+    make_segmentation_bedfile
+      make_ChromHMM_bedfile
+        - make_ChromHMM_state_bedfile
+          Adds colour, create bed
+        ||
+        - Nothing, file exists
+
+set_cutoffs
+  [This functions first selects which states are directly useful to infer TF binding, then determines an optimal cutoff so as to best fit the overall transcription factor binding probability]
+  - select_segmentation_cutoffs
+      [This functions first selects which states of a given segmentation are directly useful to infer TF binding, then determines an optimal cutoff so as to best fit the overall transcription factor binding]
+
+      select_relevant_states
+        [for a given segmentations, returns weighted list of relevant states with a given label]
+
+        test_relevance
+          [for a given segmentation, a given state and a given label, returns confidence in that state's labelling]
+
+          compute_enrichment_between_files
+            [compute enrichment between two bed files]
+
+      select_segmentation_cutoff
+        [for a given segmentation, and a given label, determine cutoff to call a new feature]
+
+        fscore
+        [compute fscore of a composite wiggletools function with cutoff wrt general TF binding]
+
+    store_data_in_file(cutoffs)
+    store_data_in_file(selected_states)
+  ||
+  - load_data_from_file
+
+
+compute_regulatory_features
+  [ Foreach function ('tss', 'proximal', 'distal', 'ctcf'):
+    Foreach segmentation:
+      - Sum the summaries of all the states associated to that function
+      - Select the regions where the sum is greater than the cutoff (determined above)
+    Compute the union of these regions
+
+  We then apply heuristic rules:
+  * TSSs which have no experimental validation (CAGE) are downgraded to proximal
+  * Proximal enhancers which overlap with a TSS are added to the TSS's whiskers (and do not exist separately)
+  * TFBS+DNase regions which do not overlap any chromatin region are labelled 'tfbs'
+  * DNAse regions which do not overlap any of the above are labelled 'DNAse'
+  ]
+
+  compute_initial_regions (TSS_LABEL, PROXIMAL_LABEL, DISTAL_LABEL, CTCF_LABEL)
+  make_awk_cmd_bedgraph_to_bed9 (TFBS_LABEL) #compute TF binding
+  make_awk_cmd_bedgraph_to_bed9 (DNASE_LABEL) #compute open chromantin / dnase
+  expand_boundaries
+    DNAse sites are merged to overlapping TFBS sites
+    DNAse and TFBS sites are merged to overlapping distal sites
+    DNAse, TFBS and distal sites are merged to overlapping proximal sites
+    DNAse, TFBS, distal and proximal sites are merged to overlapping TSS sites
+
+
+
+
+
+fetch_metadata
+  fetch_all_toplevel_slices
+
+
+
+Why are these excluded?
+ my $epigenome_is_excluded =
+         ($cell_short_name eq "CD38- naïve B cell (CB)")
+      || ($cell_short_name eq "CD38- naive B cell (VB)")
+      || ($cell_short_name eq "CD4+ ab T cell (CB)")
+      || ($cell_short_name eq "CD8+ ab T cell (VB)")
+      || ($cell_short_name eq "EM CD8+ ab T cell (VB)")
+      || ($cell_short_name eq "Naïve B cell (To)")
+    ;
+
+The ticket
+https://www.ebi.ac.uk/panda/jira/browse/ENSREGULATION-906
+states:
+Suggested fix: delete this line:
+https://github.com/Ensembl/ensembl-funcgen/blob/release/93/scripts/regulatory_build/build_regulatory_features.pl#L2971
+Which also happened (31 August 2018):
+https://github.com/Ensembl/ensembl-funcgen/commit/54178cff0bcb20850f5b7a18f3a12fccfd8fe657
+
+But then it got reintroduced (09 October 2018):
+https://github.com/Ensembl/ensembl-funcgen/commit/28fe4a56f98a389ad30f89b5cb4b6518c9b18e92
+
+In? Out? Gosh, I miss those burgers. ;)
+
+TFS vs TFBS
+https://github.com/Ensembl/ensembl-funcgen/blame/master/scripts/regulatory_build/new_build_regulatory_features.pl#L1346
+This is the only usage of this key. Later on the directory is used:
+https://github.com/Ensembl/ensembl-funcgen/blob/master/scripts/regulatory_build/new_build_regulatory_features.pl#L3438
+
+
+
