@@ -506,6 +506,7 @@ use vars qw( %Config );
         'GPL16776',
         'GPL18520',
         'GPL19666',
+        'GPL26966',
         ## Plant arrays
         'G2519F-015058', # Rice
         'G2519F-015059', # Arabidopsis
