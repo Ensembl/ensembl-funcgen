@@ -64,16 +64,6 @@ sub _constructor_parameters {
 
 sub dbID          { return shift->_generic_get_or_set('dbID',          @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
 
 =head2 name
 
@@ -174,14 +164,6 @@ sub get_mate_ReadFile {
   return $read_file_mate;
 }
 
-sub fetch_mate_ReadFile {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_mate_ReadFile instead.';
-  deprecate($msg);
-  return $self->get_mate_ReadFile;
-}
-
 sub get_FastQC {
 
   my $self         = shift;
@@ -192,14 +174,6 @@ sub get_FastQC {
   }
   my $fastqc = $fastqc_adaptor->fetch_by_ReadFile($self);
   return $fastqc;
-}
-
-sub fetch_FastQC {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_FastQC instead.';
-  deprecate($msg);
-  return $self->get_FastQC;
 }
 
 =head2 get_Analysis
@@ -260,26 +234,6 @@ sub get_ReadFileExperimentalConfiguration {
         $self->dbID
       );
   return $read_file_experimental_configurations->[0];
-}
-
-=head2 fetch_ReadFileExperimentalConfiguration
-
-  Example    : my $read_file_experimental_configuration
-                 = $read_file->fetch_ReadFileExperimentalConfiguration;
-  Description: Getter for the ReadFileExperimentalConfiguration object.
-  Returntype : Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub fetch_ReadFileExperimentalConfiguration {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_ReadFileExperimentalConfiguration instead.';
-  deprecate($msg);
-  return $self->get_ReadFileExperimentalConfiguration;
 }
 
 =head2 set_ReadFileExperimentalConfiguration

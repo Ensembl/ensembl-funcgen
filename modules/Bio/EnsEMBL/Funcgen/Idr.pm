@@ -73,16 +73,6 @@ sub _constructor_parameters {
 
 sub dbID          { return shift->_generic_get_or_set('dbID',          @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
 sub experiment_id { return shift->_generic_get_or_set('experiment_id', @_); }
 sub max_peaks     { return shift->_generic_get_or_set('max_peaks',     @_); }
 sub type          { return shift->_generic_get_or_set('type',          @_); }
@@ -90,14 +80,6 @@ sub failed_idr_pairs { return shift->_generic_get_or_set('failed_idr_pairs', @_)
 
 sub get_Experiment {
   return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
-}
-
-sub fetch_Experiment {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_Experiment instead.';
-  deprecate($msg);
-  return $self->get_Experiment;
 }
 
 =head2 summary_as_hash

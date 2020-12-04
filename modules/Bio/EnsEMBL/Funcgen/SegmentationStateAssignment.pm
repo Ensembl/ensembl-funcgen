@@ -53,17 +53,6 @@ sub _constructor_parameters {
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
-
 sub state        { return shift->_generic_get_or_set('state',        @_); }
 sub segmentation { return shift->_generic_get_or_set('segmentation', @_); }
 sub assignment   { return shift->_generic_get_or_set('assignment',   @_); }

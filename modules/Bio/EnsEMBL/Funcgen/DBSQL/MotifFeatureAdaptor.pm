@@ -215,50 +215,6 @@ sub _generic_fetch_Iterator {
     });
 }
 
-=head2 fetch_all_by_Slice_FeatureSets
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : arrayref of Bio::EnsEMBL::Funcgen::FeatureSet objects
-  #Arg [3]    : (optional) string - type e.g. Jaspar/Inferred
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_all_by_Slice_FeatureSet($slice, $fset);
-  Description: Retrieves a list of features on a given slice, specific for a given FeatureSet.
-  Returntype : Listref of Bio::EnsEMBL::MotifFeature objects
-  Exceptions : Throws if FeatureSet is not valid
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_by_Slice_FeatureSets {
-  my ($self, $slice, $fsets, $type) = @_;
-
-  my $deprecation_message = 'Will be removed in release 100.';
-  deprecate($deprecation_message);
-
-  #could add logic_name here for motif mapper analysis, motif source analysis
-  #$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fsets);
-  foreach my $fset (@$fsets){
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-  }
-
-  #Extend query tables
-  $self->_tables([['associated_motif_feature', 'amf'], ['annotated_feature', 'af']]);
-
-  my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
-	'amf.annotated_feature_id=af.annotated_feature_id and af.feature_set_id IN('.join(',', (map $_->dbID, @$fsets)).')';
-  #Can't bind_param in lists
-
-  #Group here as the mf may be linked to multiple afs across fsets
-  $final_clause = ' GROUP BY mf.motif_feature_id';
-
-  my $mfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-  $self->reset_true_tables;
-  $final_clause = $true_final_clause;
-
-  return $mfs;
-}
-
 =head2 _fetch_all_overlapping_Peaks
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature

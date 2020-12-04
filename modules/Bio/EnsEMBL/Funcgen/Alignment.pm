@@ -112,24 +112,6 @@ sub get_Analysis {
   return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
 }
 
-=head2 fetch_Analysis
-
-  Example    : my $analysis = $alignment->fetch_Analysis;
-  Description: Fetches the analysis of the alignment. This is the analysis
-               representing the aligner that was used to align the
-               reads.
-  Returntype : Bio::EnsEMBL::Analysis
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-sub fetch_Analysis {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_Analysis;
-}
-
 sub set_Analysis {
   my $self = shift;
   my $obj  = shift;
@@ -166,12 +148,6 @@ sub get_all_ReadFileExperimentalConfigurations {
   return \@read_file_experimental_configurations;
 }
 
-sub fetch_all_ReadFileExperimentalConfigurations {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_all_ReadFileExperimentalConfigurations;
-}
-
 sub _delete_bam_file_from_db {
 
   my $self = shift;
@@ -190,12 +166,6 @@ sub get_all_deduplicated_replicate_Alignments {
   return $alignment_adaptor->fetch_all_deduplicated_replicates_by_Alignment($self);
 }
 
-sub fetch_all_deduplicated_replicate_Alignments {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_all_deduplicated_replicate_Alignments;
-}
-
 sub get_source_Alignment {
 
   my $self         = shift;
@@ -206,12 +176,6 @@ sub get_source_Alignment {
   }
   my $alignment = $alignment_adaptor->fetch_by_dbID($self->source_alignment_id);
   return $alignment;
-}
-
-sub fetch_source_Alignment {
-  my $self         = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_source_Alignment;
 }
 
 sub get_Chance_by_control_Alignment {
@@ -230,12 +194,6 @@ sub get_Chance_by_control_Alignment {
   return $chance;
 }
 
-sub fetch_Chance_by_control_Alignment {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_Chance_by_control_Alignment(@_);
-}
-
 sub get_Experiment {
 
   my $self = shift;
@@ -246,12 +204,6 @@ sub get_Experiment {
   }
   my $experiment = $experiment_adaptor->fetch_by_dbID($self->experiment_id);
   return $experiment;
-}
-
-sub fetch_Experiment {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_Experiment;
 }
 
 sub get_PhantomPeak {
@@ -266,17 +218,11 @@ sub get_PhantomPeak {
   return $phantom_peak;
 }
 
-sub fetch_PhantomPeak {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_PhantomPeak;
-}
-
 =head2 has_bam_DataFile
 
   Example    : my $bam_DataFile = undef;
                if ($alignment->has_bam_DataFile) {
-                 $bam_DataFile = $alignment->fetch_bam_DataFile;
+                 $bam_DataFile = $alignment->get_bam_DataFile;
                } else {
                  warn "No bam file available!";
                }
@@ -297,7 +243,7 @@ sub has_bam_DataFile {
 
   Example    : my $bigwig_DataFile = undef;
                if ($alignment->has_bigwig_DataFile) {
-                 $bigwig_DataFile = $alignment->fetch_bigwig_DataFile;
+                 $bigwig_DataFile = $alignment->get_bigwig_DataFile;
                } else {
                  warn "No bigwig file available!";
                }
@@ -340,29 +286,6 @@ sub get_bam_DataFile {
   return $self->_fetch_DataFile($bam_file_id);
 }
 
-=head2 fetch_bam_DataFile
-
-  Example    : my $bam_DataFile = undef;
-               if ($alignment->has_bam_DataFile) {
-                 $bam_DataFile = $alignment->fetch_bam_DataFile;
-               } else {
-                 warn "No bam file available!";
-               }
-  Description: Fetches the data file object representing the bam file for
-               this alignment.
-               reads.
-  Returntype : Bio::EnsEMBL::Funcgen::DataFile
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-sub fetch_bam_DataFile {
-  my $self        = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_bam_DataFile;
-}
-
 =head2 get_bigwig_DataFile
 
   Example    : my $bigwig_DataFile = undef;
@@ -387,29 +310,6 @@ sub get_bigwig_DataFile {
   my $bigwig_file_id = $self->bigwig_file_id;
   
   return $self->_fetch_DataFile($bigwig_file_id);
-}
-
-=head2 fetch_bigwig_DataFile
-
-  Example    : my $bigwig_DataFile = undef;
-               if ($alignment->has_bigwig_DataFile) {
-                 $bigwig_DataFile = $alignment->fetch_bigwig_DataFile;
-               } else {
-                 warn "No bigwig file available!";
-               }
-  Description: Fetches the data file object representing the signal file in
-               bigwig format for this alignment.
-               reads.
-  Returntype : Bio::EnsEMBL::Funcgen::DataFile
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-sub fetch_bigwig_DataFile {
-  my $self           = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_bigwig_DataFile;
 }
 
 =head2 get_all_ReadFiles
@@ -445,27 +345,6 @@ sub get_all_ReadFiles {
     push @all_read_files, $current_read_file;
   }
   return \@all_read_files;
-}
-
-=head2 fetch_all_ReadFiles
-
-  Example    : my $read_files = $alignment->fetch_all_ReadFiles;
-               print @$read_files ." read files were used to generate this alignment.";
-               foreach my $current_readfile (@$read_files) {
-                 print "  - " . $current_readfile->name . "\n";
-               }
-  Description: Fetches all read file objects representing the read files that
-               were used to generate this alignment.
-  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::ReadFile]
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-sub fetch_all_ReadFiles {
-
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_all_ReadFiles;
 }
 
 =head2 summary_as_hash
@@ -515,15 +394,6 @@ sub summary_as_hash {
   }
   
   return $summary;
-}
-
-sub _rename_msg {
-  my $self     = shift;
-  my @caller   = caller(1);
-  my $sub_name = $caller[3];
-  $sub_name =~ s/fetch/get/;
-  return 'It will be removed in release 104.' . "\n" .
-      'Please use ' . $sub_name . ' instead!';
 }
 
 1;

@@ -68,17 +68,6 @@ sub _constructor_parameters {
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
-
 sub analysis_id         { return shift->_generic_get_or_set('analysis_id',         @_); }
 sub alignment_id        { return shift->_generic_get_or_set('alignment_id',        @_); }
 sub num_reads           { return shift->_generic_get_or_set('num_reads',           @_); }
@@ -109,21 +98,6 @@ sub get_Alignment {
   }
   my $alignment = $alignment_adaptor->fetch_by_dbID($self->alignment_id);
   return $alignment;
-}
-
-sub fetch_Alignment {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_Alignment instead.';
-  deprecate($msg);
-  return $self->get_Alignment;
-}
-
-sub fetch_Idr {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.';
-  deprecate($msg);
-  return $self->get_Idr;
 }
 
 =head2 summary_as_hash

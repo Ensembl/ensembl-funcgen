@@ -212,25 +212,6 @@ sub class{ return $_[0]->{class}; }
 
 sub so_accession{  return $_[0]->{so_accession}; }
 
-=head2 so_name
-
-  Example    : my $so_name = $ft->so_name;
-  Description: Getter of sequence ontology name  for FeatureType objects.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub so_name{
-  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::FeatureType::so_name has '
-  . 'been deprecated and will be removed in release 104. Please use '
-      . 'Bio::EnsEMBL::Funcgen::FeatureType::so_term instead.';
-  deprecate($deprecation_message);
-  return $_[0]->{so_term};
-}
-
 =head2 so_term
 
   Example    : my $so_term = $ft->so_term;

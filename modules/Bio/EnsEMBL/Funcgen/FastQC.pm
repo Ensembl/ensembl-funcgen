@@ -66,17 +66,6 @@ sub _constructor_parameters {
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
-
 sub read_file_id                 { return shift->_generic_get_or_set('read_file_id',                 @_); }
 sub basic_statistics             { return shift->_generic_get_or_set('basic_statistics',             @_); }
 sub per_base_sequence_quality    { return shift->_generic_get_or_set('per_base_sequence_quality',    @_); }

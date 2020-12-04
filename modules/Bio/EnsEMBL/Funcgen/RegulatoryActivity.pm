@@ -86,17 +86,6 @@ sub regulatory_feature_id { return shift->_generic_get_or_set('regulatory_featur
 sub activity              { return shift->_generic_get_or_set('activity', @_); }
 sub epigenome_id          { return shift->_generic_get_or_set('epigenome_id', @_); }
 
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
-
 sub adaptor { 
   
   my $self = shift;

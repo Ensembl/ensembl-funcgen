@@ -266,13 +266,5 @@ sub get_all_ProbeSetTranscriptMappings {
   return $self->adaptor->db->get_ProbeSetTranscriptMappingAdaptor->fetch_all_by_probe_set_id($self->dbID);
 }
 
-sub fetch_all_ProbeSetTranscriptMappings {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_all_ProbeSetTranscriptMappings instead.';
-  deprecate($msg);
-  return $self->get_all_ProbeSetTranscriptMappings;
-}
-
 1;
 

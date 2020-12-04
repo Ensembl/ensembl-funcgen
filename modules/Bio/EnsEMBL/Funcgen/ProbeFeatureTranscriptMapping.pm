@@ -83,14 +83,6 @@ sub get_ProbeFeature {
   return $probe_feature;
 }
 
-sub fetch_ProbeFeature {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_ProbeFeature instead.';
-  deprecate($msg);
-  return $self->get_ProbeFeature;
-}
-
 sub _generic_get_or_set {
   my $self  = shift;
   my $name  = shift;

@@ -106,16 +106,6 @@ sub _constructor_parameters {
 
 sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
 
 =head2 name
 
@@ -154,24 +144,6 @@ sub used_for_regulatory_build { return shift->_generic_get_or_set('used_for_regu
 =cut
 sub display_label   { return shift->_generic_get_or_set('display_label',   @_); }
 
-=head2 fetch_FeatureType
-
-  Example    : my $feature_type = $peak_calling->fetch_FeatureType;
-  Description: Fetches the feature type of the peak calling. This is the 
-               type of feature the experiment was assaying for.
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub fetch_FeatureType {
-  my $self= shift;
-  deprecate($self->_rename_msg);
-  return $self->get_FeatureType;
-}
-
 =head2 get_FeatureType
 
   Example    : my $feature_type = $peak_calling->get_FeatureType;
@@ -201,23 +173,6 @@ sub _fetch_Alignment {
   return $alignment;
 }
 
-=head2 fetch_signal_Alignment
-
-  Example    : my $alignment = $peak_calling->fetch_signal_Alignment;
-  Description: Fetches the alignment on which the peak calling was done.
-  Returntype : Bio::EnsEMBL::Funcgen::Alignment
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub fetch_signal_Alignment {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_signal_Alignment;
-}
-
 =head2 get_signal_Alignment
 
   Example    : my $alignment = $peak_calling->get_signal_Alignment;
@@ -235,12 +190,6 @@ sub get_signal_Alignment {
   return $self->_fetch_Alignment($signal_alignment_id);
 }
 
-sub fetch_Idr {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_Idr;
-}
-
 sub get_Idr {
   my $self = shift;
 
@@ -250,15 +199,6 @@ sub get_Idr {
   }
   my $idr = $idr_adaptor->_fetch_by_experiment_id($self->experiment_id);
   return $idr;
-}
-
-sub fetch_PeakCallingStatistic {
-  my $self = shift;
-  deprecate('It will be removed in release 104.' . "\n" .
-    'Please use '
-    .'Bio::EnsEMBL::Funcgen::PeakCalling::get_PeakCallingStatistic_by_statistic'
-    . ' instead!');
-  return $self->get_PeakCallingStatistic_by_statistic(@_);
 }
 
 =head2 get_PeakCallingStatistic_by_statistic
@@ -283,12 +223,6 @@ sub get_PeakCallingStatistic_by_statistic {
   }
   my $peak_calling_statistic = $peak_calling_statistic_adaptor->_fetch_by_PeakCalling_statistic($self, $statistic);
   return $peak_calling_statistic;
-}
-
-sub fetch_Frip {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_Frip;
 }
 
 sub get_Frip {
@@ -320,30 +254,6 @@ sub get_Chance {
   return $chance;
 }
 
-sub fetch_Chance {
-    my $self = shift;
-    deprecate($self->_rename_msg);
-    return $self->get_Chance;
-}
-
-=head2 fetch_control_Alignment
-
-  Example    : my $alignment = $peak_calling->fetch_control_Alignment;
-  Description: Fetches the control used for peak calling. undefined, 
-               if no control was used.
-  Returntype : Bio::EnsEMBL::Funcgen::Alignment
-  Exceptions : None
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub fetch_control_Alignment {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_control_Alignment;
-}
-
 =head2 get_control_Alignment
 
   Example    : my $alignment = $peak_calling->get_control_Alignment;
@@ -360,25 +270,6 @@ sub get_control_Alignment {
   my $self = shift;
   my $control_alignment_id = $self->control_alignment_id;
   return $self->_fetch_Alignment($control_alignment_id);
-}
-
-=head2 fetch_Analysis
-
-  Example    : my $analysis = $peak_calling->fetch_Analysis;
-  Description: Fetches the analysis of the peak calling. This is the analysis
-               representing the peak caller that was used to analyse the 
-               alignment.
-  Returntype : Bio::EnsEMBL::Analysis
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub fetch_Analysis {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_Analysis;
 }
 
 =head2 get_Analysis
@@ -413,28 +304,6 @@ sub get_Epigenome {
     return $self->_generic_fetch('epigenome', 'get_EpigenomeAdaptor', 'epigenome_id');
 }
 
-=head2 fetch_Epigenome
-
-  Example    : my $epigenome = $peak_calling->fetch_Epigenome;
-  Description: Fetches the epigenome that was used in the assay.
-  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-sub fetch_Epigenome {
-    my $self = shift;
-    deprecate($self->_rename_msg);
-    return $self->get_Epigenome;
-}
-
-sub fetch_Experiment {
-  my $self = shift;
-  deprecate($self->_rename_msg);
-  return $self->get_Experiment;
-}
-
 =head2 get_Experiment
 
   Example    : my $experiment = $peak_calling->get_Experiment;
@@ -453,24 +322,6 @@ sub get_Experiment {
 sub num_peaks {
   my $self = shift;
   return $self->adaptor->count_peaks_by_PeakCalling($self);
-}
-
-=head2 fetch_source_label
-
-  Example    : my $source_label = $peak_calling->fetch_source_label;
-  Description: Fetches the name of the experimental group of the experiment 
-               that led to this peak calling.
-  Returntype : String
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub fetch_source_label {
-    my $self = shift;
-    deprecate($self->_rename_msg);
-    return $self->get_source_label;
 }
 
 =head2 get_source_label
@@ -546,15 +397,6 @@ sub summary_as_hash {
     $summary->{chance} = $chance->summary_as_hash
   }
   return $summary;
-}
-
-sub _rename_msg {
-  my $self     = shift;
-  my @caller   = caller(1);
-  my $sub_name = $caller[3];
-  $sub_name =~ s/fetch/get/;
-  return 'It will be removed in release 104.' . "\n" .
-      'Please use ' . $sub_name . ' instead!';
 }
 
 1;

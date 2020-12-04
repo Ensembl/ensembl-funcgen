@@ -69,16 +69,6 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
 
 sub dbID              { return shift->_generic_get_or_set('dbID',              @_);}
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-    my $self = shift;
-    deprecate(
-        ref($self) . '::db has been deprecated and will be removed in '
-            . 'release 104.'
-            . "\n"
-            . 'Please use ' . ref($self) . '::adaptor instead.'
-    );
-    return $self->adaptor(@_);
-}
 sub peak_calling_id   { return shift->_generic_get_or_set('peak_calling_id',   @_);}
 
 =head2 summit

@@ -81,14 +81,6 @@ sub get_Probe {
   return $probe;
 }
 
-sub fetch_Probe {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_Probe instead.';
-  deprecate($msg);
-  return $self->get_Probe;
-}
-
 sub _generic_get_or_set {
   my $self  = shift;
   my $name  = shift;

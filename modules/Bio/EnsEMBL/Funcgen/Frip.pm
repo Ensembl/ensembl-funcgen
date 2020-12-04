@@ -54,31 +54,12 @@ sub _constructor_parameters {
 
 sub dbID            { return shift->_generic_get_or_set('dbID',             @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
-
 sub frip            { return shift->_generic_get_or_set('frip',             @_); }
 sub total_reads     { return shift->_generic_get_or_set('total_reads',      @_); }
 sub peak_calling_id { return shift->_generic_get_or_set('peak_calling_id',  @_); }
 
 sub get_PeakCalling {
   return shift->_generic_fetch('peak_calling', 'get_PeakCallingAdaptor', 'peak_calling_id');
-}
-
-sub fetch_PeakCalling {
-  my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_PeakCalling instead.';
-  deprecate($msg);
-  return $self->get_PeakCalling;
 }
 
 =head2 summary_as_hash

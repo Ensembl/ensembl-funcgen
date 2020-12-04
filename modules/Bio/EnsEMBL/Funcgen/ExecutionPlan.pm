@@ -53,16 +53,6 @@ sub _constructor_parameters {
 
 sub dbID           { return shift->_generic_get_or_set('dbID',           @_); }
 sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub db {
-  my $self = shift;
-  deprecate(
-      ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 104.'
-          . "\n"
-          . 'Please use ' . ref($self) . '::adaptor instead.'
-  );
-  return $self->adaptor(@_);
-}
 sub experiment_id  { return shift->_generic_get_or_set('experiment_id',  @_); }
 sub time           { return shift->_generic_get_or_set('time',           @_); }
 sub execution_plan { return shift->_generic_get_or_set('_execution_plan', @_); }
