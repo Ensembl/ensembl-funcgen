@@ -75,7 +75,7 @@ sub pipeline_analyses {
             -parameters  => {
                   use_bash_pipefail => 1,
                   return_codes_2_branches => {
-                    1 => 2
+                    1 => 0
                   },
                   cmd => 
                       # Rscript does not search the path, so we use "which" to 
@@ -97,11 +97,10 @@ sub pipeline_analyses {
                       # ensures that the worker also dies. (or so we hope)
                       . qq(    sleep 30                        )
             },
-          -rc_name    => '4Gb_job_2cpus',
+          -rc_name    => '10Gb_job_2cpus',
           -flow_into  => { 
-              MEMLIMIT => 'qc_run_phantom_peaks_himem',
               MAIN     => 'qc_load_phantom_peaks',
-              2        => 'qc_load_failed_phantom_peaks',
+              0        => 'qc_run_phantom_peaks_himem',
           },
         },
         {   -logic_name  => 'qc_run_phantom_peaks_himem',
@@ -109,7 +108,7 @@ sub pipeline_analyses {
             -parameters  => {
                   use_bash_pipefail => 1,
                   return_codes_2_branches => {
-                    1 => 2
+                    1 => 0
                   },
                   cmd => 
                   # Rscript does not search the path, so we use "which" to 
@@ -134,7 +133,7 @@ sub pipeline_analyses {
 	    -rc_name    => '32Gb_job_2cpus',
             -flow_into  => { 
               MAIN => 'qc_load_phantom_peaks',
-              2    => 'qc_load_failed_phantom_peaks',
+              0    => 'qc_load_failed_phantom_peaks',
             },
         },
         {   -logic_name => 'qc_load_phantom_peaks',

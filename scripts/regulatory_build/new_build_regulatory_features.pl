@@ -297,6 +297,7 @@ sub read_command_line {
     "dnadb_pass=s",
     "mask=s",
     "species=s",
+    "must_compute=s"
   );
 
   $options{output_dir} = $options{out};
@@ -1058,29 +1059,33 @@ sub fetch_tss {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
         $tss_id += 1;
         if ($transcript->strand() > 0) {
-          push @tss_coords, [
-              $slice->seq_region_name(), 
-              $transcript->start() - 1, 
-              $transcript->start(), 
-              "tss_${tss_id}", 
-              1000,
-              '+',
-              $transcript->start() - 1, 
-              $transcript->start(),
-              $COLORS{tss},
-          ];
+          if (($transcript->start() -1) > 0) {
+            push @tss_coords, [
+                $slice->seq_region_name(),
+                $transcript->start() - 1,
+                $transcript->start(),
+                "tss_${tss_id}",
+                1000,
+                '+',
+                $transcript->start() - 1,
+                $transcript->start(),
+                $COLORS{tss},
+            ];
+          }
         } else {
-          push @tss_coords, [
-              $slice->seq_region_name(), 
-              $transcript->end() - 1, 
-              $transcript->end(),
-              "tss_${tss_id}", 
-              1000, 
-              '-',
-              $transcript->end() - 1, 
-              $transcript->end(),
-              $COLORS{tss},
-          ];
+          if (($transcript->end() -1) > 0) {
+            push @tss_coords, [
+                $slice->seq_region_name(),
+                $transcript->end() - 1,
+                $transcript->end(),
+                "tss_${tss_id}",
+                1000,
+                '-',
+                $transcript->end() - 1,
+                $transcript->end(),
+                $COLORS{tss},
+            ];
+          }
         }
       }
     }
