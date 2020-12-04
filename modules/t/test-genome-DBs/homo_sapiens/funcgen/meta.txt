@@ -1,4 +1,4 @@
-534	\N	schema_version	103
+534	\N	schema_version	104
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -190,3 +190,4 @@
 782	\N	patch	patch_101_102_a.sql|schema_version
 783	\N	patch	patch_101_102_b.sql|Drop underlying_structure table
 784	\N	patch	patch_102_103_a.sql|schema_version
+785     \N      patch   patch_103_104_a.sql|schema_version
