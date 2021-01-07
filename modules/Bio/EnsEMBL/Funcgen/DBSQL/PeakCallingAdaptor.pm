@@ -80,7 +80,7 @@ sub _fetch_all_by_Epigenome_ExperimentalGroup {
     my @result;
     foreach my $peak_calling (@$peak_callings) {
     
-      my $experiment = $peak_calling->fetch_Experiment;
+      my $experiment = $peak_calling->get_Experiment;
       my $experimental_group = $experiment->experimental_group;
       
       if ($experimental_group->name eq $experimental_group_wanted->name) {
