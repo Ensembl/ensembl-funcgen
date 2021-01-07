@@ -204,8 +204,8 @@ sub display_label {
     
     if(! $self->{'display_label'}  && $self->adaptor){
       my $peak_calling = $self->get_PeakCalling();
-      $self->{'display_label'} = $peak_calling->fetch_FeatureType->name()." -";
-      $self->{'display_label'} .= " ".$peak_calling->fetch_Epigenome->short_name();
+      $self->{'display_label'} = $peak_calling->get_FeatureType->name()." -";
+      $self->{'display_label'} .= " ".$peak_calling->get_Epigenome->short_name();
       $self->{'display_label'} .= " Enriched Site";
     }
 	
@@ -231,8 +231,8 @@ sub display_id {
 
     if(! $self->{'display_id'}  && $self->adaptor){
       $self->{'display_id'} = join '_', 
-        $peak_calling->fetch_FeatureType->name(),
-        $peak_calling->fetch_Epigenome->production_name(),
+        $peak_calling->get_FeatureType->name(),
+        $peak_calling->get_Epigenome->production_name(),
         "_Enriched_Site";
     }
     return $self->{'display_id'};
@@ -275,7 +275,7 @@ sub seq_region_name {
 
 sub feature_so_acc {
   my $self = shift;
-  return $self->get_PeakCalling->fetch_FeatureType->so_accession;
+  return $self->get_PeakCalling->get_FeatureType->so_accession;
 }
 
 =head2 feature_so_term
@@ -289,7 +289,7 @@ sub feature_so_acc {
 
 sub feature_so_term {
   my $self = shift;
-  return $self->get_PeakCalling->fetch_FeatureType->so_term;
+  return $self->get_PeakCalling->get_FeatureType->so_term;
 }
 
 =head2 summary_as_hash
@@ -309,9 +309,9 @@ sub summary_as_hash {
   return
     {
       id               => $self->dbID,
-      feature_type     => $peak_calling->fetch_FeatureType->name,
-      epigenome        => $peak_calling->fetch_Epigenome->name,
-      source           => $peak_calling->fetch_Analysis->logic_name,
+      feature_type     => $peak_calling->get_FeatureType->name,
+      epigenome        => $peak_calling->get_Epigenome->name,
+      source           => $peak_calling->get_Analysis->logic_name,
       seq_region_name  => $slice->seq_region_name,
       start            => $slice->seq_region_start,
       end              => $slice->seq_region_end,

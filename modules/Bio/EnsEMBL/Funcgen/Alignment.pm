@@ -140,7 +140,7 @@ sub get_all_ReadFileExperimentalConfigurations {
   foreach my $read_file (@$read_files) {
   
     my $read_file_experimental_configuration 
-      = $read_file->fetch_ReadFileExperimentalConfiguration;
+      = $read_file->get_ReadFileExperimentalConfiguration;
     
     push @read_file_experimental_configurations,
       $read_file_experimental_configuration;
