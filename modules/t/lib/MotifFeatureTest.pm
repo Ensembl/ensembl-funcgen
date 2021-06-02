@@ -103,6 +103,8 @@ sub define_expected :Test(setup) {
 
     $self->{expected} = {
         'binding_matrix'          => $binding_matrix,
+        'feature_so_acc'          => 'SO:0000235',
+        'feature_so_term'         => 'TF_binding_site',
         'score'                   => 6.85690955393,
         'stable_id'               => 'ENSM00205163537',
         'number_of_peaks'         => 7,
@@ -146,6 +148,22 @@ sub get_BindingMatrix :Test(1) {
               $self->{expected}->{binding_matrix},
               'get_BindingMatrix works'
     );
+}
+
+sub feature_so_acc :Test(1) {
+    my $self = shift;
+
+    is($self->{fetched}->[0]->feature_so_acc,
+       $self->{expected}->{feature_so_acc},
+       'feature_so_acc works');
+}
+
+sub feature_so_term :Test(1) {
+    my $self = shift;
+
+    is($self->{fetched}->[0] ->feature_so_term,
+       $self->{expected}->{feature_so_term},
+       'feature_so_term works');
 }
 
 sub get_all_overlapping_Peaks :Test(no_plan) {

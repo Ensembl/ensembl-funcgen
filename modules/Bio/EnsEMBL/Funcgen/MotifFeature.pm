@@ -73,10 +73,6 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
-use constant SEQUENCE_ONTOLOGY => {
-  acc  => 'SO:0000235',
-  term => 'TF_binding_site',
-};
 
 
 =head2 new
@@ -174,6 +170,82 @@ sub get_BindingMatrix { return shift->{binding_matrix}; }
 =cut
 
 sub score { return shift->{score}; }
+
+sub _get_all_FeatureTypes {
+    my $self = shift;
+
+    my @feature_types;
+    my $transcription_factors =
+        $self->get_BindingMatrix->get_all_TranscriptionFactors();
+
+    for my $transcription_factor (@{$transcription_factors}) {
+        my $feature_type = $transcription_factor->get_FeatureType();
+        if ($feature_type){
+            push @feature_types, $feature_type;
+        }
+    }
+
+    return \@feature_types;
+}
+
+=head2 feature_so_acc
+
+  Example       : print $motif_feature->feature_so_acc;
+  Description   : Returns the sequence ontology accession for this feature
+  Returntype    : String
+  Status        : At risk
+
+=cut
+
+sub feature_so_acc {
+    my $self = shift;
+
+    my $so_accession = 'SO:0000235'; # default SO accession;
+    my $feature_types = $self->_get_all_FeatureTypes;
+
+    # return common accession (if there is one)
+    if ($feature_types) {
+        my %unique_so_accessions;
+        for my $ft (@{$feature_types}) {
+            $unique_so_accessions{$ft->so_accession()} = 1;
+        }
+        my @so_accessions_list = keys %unique_so_accessions;
+        if (scalar @so_accessions_list == 1) {
+            $so_accession = $so_accessions_list[0];
+        }
+    }
+
+    return $so_accession;
+}
+
+=head2 feature_so_term
+
+  Example       : print $motif_feature->feature_so_term;
+  Description   : Returns the sequence ontology term for this feature
+  Returntype    : String
+  Status        : At risk
+
+=cut
+
+sub feature_so_term {
+    my $self = shift;
+    my $so_term = 'TF_binding_site'; # default SO accession;
+    my $feature_types = $self->_get_all_FeatureTypes;
+
+    # return common term (if there is one)
+    if ($feature_types) {
+        my %unique_so_terms;
+        for my $ft (@{$feature_types}) {
+            $unique_so_terms{$ft->so_term()} = 1;
+        }
+        my @so_terms_list = keys %unique_so_terms;
+        if (scalar @so_terms_list == 1) {
+            $so_term = $so_terms_list[0];
+        }
+    }
+
+    return $so_term;
+}
 
 =head2 get_all_overlapping_Peaks
 
