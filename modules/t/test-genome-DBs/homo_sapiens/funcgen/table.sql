@@ -136,7 +136,7 @@ CREATE TABLE `binding_matrix` (
   PRIMARY KEY (`binding_matrix_id`),
   UNIQUE KEY `name_idx` (`name`),
   UNIQUE KEY `stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=583 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=584 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `binding_matrix_frequencies` (
   `binding_matrix_frequencies_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -382,7 +382,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=784 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=788 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
