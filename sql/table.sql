@@ -1658,8 +1658,8 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'funcgen', NULL);
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '104');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_103_104_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '105');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_104_105_a.sql|schema_version');
 
 /**
 @table meta_coord
