@@ -81,7 +81,7 @@ sub pipeline_analyses {
                         generate_chance_report.pl \
                             --registry #reg_conf# \
                             --species #species# \
-                            --output_file #reports_dir#/#species#/frip.html
+                            --output_file #reports_dir#/#species#/chance.html
                       )
             },
           -rc_name    => '1Gb_job',
