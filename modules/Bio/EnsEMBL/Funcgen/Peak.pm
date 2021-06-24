@@ -310,7 +310,7 @@ sub summary_as_hash {
     {
       id               => $self->dbID,
       feature_type     => $peak_calling->get_FeatureType->name,
-      epigenome        => $peak_calling->get_Epigenome->name,
+      epigenome        => $peak_calling->get_Epigenome->short_name,
       source           => $peak_calling->get_Analysis->logic_name,
       seq_region_name  => $slice->seq_region_name,
       start            => $slice->seq_region_start,
