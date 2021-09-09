@@ -224,6 +224,7 @@ use vars qw( %Config );
       'RaGene-2_1-st-v1',
       'HuGene-1_0-st-v1',
       'HuGene-2_0-st-v1',
+      'HuGene-2_1-st-v1',
       'HuEx-1_0-st-v2',
       'MoGene-1_0-st-v1',
       'MoEx-1_0-st-v1',
