@@ -19,7 +19,7 @@ sub summarise_ReadFile {
   }
 
   if ($read_file->is_paired_end) {
-    my $read_file_mate = $read_file->fetch_mate_ReadFile;
+    my $read_file_mate = $read_file->get_mate_ReadFile;
     my $summary = {
         $read_file->paired_end_tag      => $read_file->name,
         $read_file_mate->paired_end_tag => $read_file_mate->name,

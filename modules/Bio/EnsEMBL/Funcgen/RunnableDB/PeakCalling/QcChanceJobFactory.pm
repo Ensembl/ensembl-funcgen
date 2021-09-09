@@ -29,7 +29,7 @@ sub run {
       $self->throw("Can't find signal alignment with name: $alignment_name");
    }
     
-    my $signal_experiment = $signal_alignment->fetch_Experiment;
+    my $signal_experiment = $signal_alignment->get_Experiment;
     
     if ($signal_experiment->is_control) {
         $self->warning("Chance is not run on controls, no jobs will be generated.");
@@ -67,10 +67,10 @@ sub run {
 
     my $chance_bin_file = 'chance_bin_file_for_'.$epigenome_production_name.'_'.$epigenome_gender.'.bed';
 
-    my $signal_bam_data_file = $signal_alignment->fetch_bam_DataFile;
+    my $signal_bam_data_file = $signal_alignment->get_bam_DataFile;
     my $signal_bam_file_name = $signal_bam_data_file->path;
 
-    my $control_bam_data_file = $control_alignment->fetch_bam_DataFile;
+    my $control_bam_data_file = $control_alignment->get_bam_DataFile;
     my $control_bam_file_name = $control_bam_data_file->path;
 
     my $signal_bam_file  = $data_root_dir . '/' . $species . '/' . $default_assembly . '/' . $signal_bam_file_name;

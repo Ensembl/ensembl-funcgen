@@ -34,11 +34,11 @@ sub run {
   
   my $epigenome_production_name 
     = $alignment
-      ->fetch_Experiment
+      ->get_Experiment
       ->epigenome
       ->production_name;
   
-  my $bam_file = $alignment->fetch_bam_DataFile->relative_ftp_site_path;
+  my $bam_file = $alignment->get_bam_DataFile->relative_ftp_site_path;
   my $bam_file_full_path = $data_root_dir . '/' . $bam_file;
   
   if (! -e $bam_file_full_path) {
