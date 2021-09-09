@@ -31,11 +31,12 @@ sub run {
   my $ensembl_analysis = $align_plan->{ensembl_analysis};
   
   my $remove_duplicates_ensembl_analysis = $plan->{analysis};
-  
+ 
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
-  my $is_complete     = $align_plan->{is_complete} eq TRUE;
-  my $is_control      = $align_plan->{is_control}  eq TRUE;
-  
+
+  my $is_complete = ($align_plan->{is_complete} eq TRUE) ? 1:0;
+  my $is_control = ($align_plan->{is_control} eq TRUE) ? 1:0;
+ 
   my $experiment_adaptor = Bio::EnsEMBL::Registry
   ->get_adaptor(
       $species, 
@@ -199,7 +200,7 @@ sub register_alignment {
   my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
   
   if (! defined $alignment) {
-    $alignment = Bio::EnsEMBL::Funcgen::Alignment->new(
+     $alignment = Bio::EnsEMBL::Funcgen::Alignment->new(
         -name           => $alignment_name,
         -analysis_id    => $alignment_analysis->dbID,
         -read_file_ids  => \@read_file_ids,
