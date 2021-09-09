@@ -83,7 +83,7 @@ sub _swarm_resource {
 sub resource_classes {
     my ($self) = @_;
     
-    my $lsf_queue_option = '-q production-rh74';
+    my $lsf_queue_option = '-q production';
     
     return {
         %{$self->SUPER::resource_classes},
