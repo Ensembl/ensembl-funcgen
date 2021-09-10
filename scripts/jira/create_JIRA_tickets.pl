@@ -257,6 +257,9 @@ sub validate_user_name {
         'ilsley'   => 'ilsley',
         'garth'    => 'ilsley',
         'Garth'    => 'ilsley',
+        'durbina'    => 'durbina',
+        'david'    => 'durbina',
+        'David'    => 'durbina',
     );
 
     if ( exists $valid_user_names{$user} ) {
