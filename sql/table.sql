@@ -438,7 +438,8 @@ CREATE TABLE `peak` (
   `summit` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`peak_id`),
   UNIQUE KEY `seq_region_feature_set_idx` (`seq_region_id`,`seq_region_start`,`peak_calling_id`),
-  KEY `feature_set_idx` (`peak_calling_id`)
+  KEY `feature_set_idx` (`peak_calling_id`),
+  KEY `peak_track` (peak_calling_id, seq_region_id, seq_region_start, seq_region_end, score, seq_region_strand, summit, peak_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=39;
 
 /**
@@ -573,7 +574,8 @@ CREATE TABLE `motif_feature_regulatory_feature` (
   PRIMARY KEY (`motif_feature_regulatory_feature_id`),
   UNIQUE KEY `mf_rf_ep_idx` (`motif_feature_id`,`regulatory_feature_id`,`epigenome_id`),
   KEY `motif_feature_idx` (`motif_feature_id`),
-  KEY `regulatory_feature_idx` (`regulatory_feature_id`)
+  KEY `regulatory_feature_idx` (`regulatory_feature_id`),
+  KEY `speedup` (regulatory_feature_id ASC, has_matching_Peak, motif_feature_id)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
