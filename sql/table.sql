@@ -575,7 +575,7 @@ CREATE TABLE `motif_feature_regulatory_feature` (
   UNIQUE KEY `mf_rf_ep_idx` (`motif_feature_id`,`regulatory_feature_id`,`epigenome_id`),
   KEY `motif_feature_idx` (`motif_feature_id`),
   KEY `regulatory_feature_idx` (`regulatory_feature_id`),
-  KEY `speedup` (regulatory_feature_id ASC, has_matching_Peak, motif_feature_id)
+  KEY `speedup` (regulatory_feature_id, has_matching_Peak, motif_feature_id)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
