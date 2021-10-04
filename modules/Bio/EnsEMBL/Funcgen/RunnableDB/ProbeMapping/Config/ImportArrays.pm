@@ -152,7 +152,6 @@ use vars qw( %Config );
         'E_coli_2',
         'E_coli_Antisense',
         'S_aureus',
-	'HT_HG-U133_Plus_PM',
 
         ## Plant arrays
         'ATH1-121501',
