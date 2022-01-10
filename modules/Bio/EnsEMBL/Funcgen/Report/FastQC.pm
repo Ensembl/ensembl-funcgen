@@ -164,7 +164,7 @@ sub process_read_file_qc_values_from_peak_callings {
   PEAK_CALLING:
   foreach my $read_file (@$read_files) {
 
-    my $fastqc = $read_file->fetch_FastQC;
+    my $fastqc = $read_file->get_FastQC;
     
     if ($fastqc) {
       $read_file_callback->($fastqc);
@@ -199,7 +199,7 @@ sub compute_datasets {
       title => 'Blueprint',
       all => $self->create_read_file_dataset(
         $all_read_files,
-        sub { shift->fetch_ReadFileExperimentalConfiguration->get_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' }
+        sub { shift->get_ReadFileExperimentalConfiguration->get_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' }
       ),
     }
   ;
@@ -210,7 +210,7 @@ sub compute_datasets {
       title => 'ENCODE',
       all => $self->create_read_file_dataset(
         $all_read_files,
-        sub { shift->fetch_ReadFileExperimentalConfiguration->get_Experiment->get_ExperimentalGroup->name eq 'ENCODE' }
+        sub { shift->get_ReadFileExperimentalConfiguration->get_Experiment->get_ExperimentalGroup->name eq 'ENCODE' }
       ),
     }
   ;
@@ -221,7 +221,7 @@ sub compute_datasets {
       title => 'Roadmap Epigenomics',
       all => $self->create_read_file_dataset(
         $all_read_files,
-        sub { shift->fetch_ReadFileExperimentalConfiguration->get_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' }
+        sub { shift->get_ReadFileExperimentalConfiguration->get_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' }
       ),
     }
   ;

@@ -165,7 +165,7 @@ sub _percent_enrichment_datasets {
 
             object_list => $all_peak_callings,
             
-            object_filter => sub { return (! shift->fetch_Experiment->get_FeatureType->creates_broad_peaks) },
+            object_filter => sub { return (! shift->get_Experiment->get_FeatureType->creates_broad_peaks) },
 
             compute_value_method => '_percent_enrichment_values'
         }),
@@ -178,7 +178,7 @@ sub _percent_enrichment_datasets {
 
             object_list => $all_peak_callings,
             
-            object_filter => sub { return (shift->fetch_Experiment->get_FeatureType->creates_broad_peaks) },
+            object_filter => sub { return (shift->get_Experiment->get_FeatureType->creates_broad_peaks) },
 
             compute_value_method => '_percent_enrichment_values'
         }),
@@ -215,7 +215,7 @@ sub _differential_percentage_enrichment_datasets {
 
             object_list => $all_peak_callings,
             
-            object_filter => sub { return (! shift->fetch_Experiment->get_FeatureType->creates_broad_peaks) },
+            object_filter => sub { return (! shift->get_Experiment->get_FeatureType->creates_broad_peaks) },
 
             compute_value_method => '_differential_percentage_enrichment_values'
         }),
@@ -228,7 +228,7 @@ sub _differential_percentage_enrichment_datasets {
 
             object_list => $all_peak_callings,
             
-            object_filter => sub { return (shift->fetch_Experiment->get_FeatureType->creates_broad_peaks) },
+            object_filter => sub { return (shift->get_Experiment->get_FeatureType->creates_broad_peaks) },
 
             compute_value_method => '_differential_percentage_enrichment_values'
         }),
@@ -247,7 +247,7 @@ sub _differential_percentage_enrichment_values {
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
-    my $chance = $peak_calling->fetch_Chance;
+    my $chance = $peak_calling->get_Chance;
     
     if (! $chance) {
       next PEAK_CALLING;
@@ -279,7 +279,7 @@ sub _percent_enrichment_values {
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
-    my $chance = $peak_calling->fetch_Chance;
+    my $chance = $peak_calling->get_Chance;
     
     if (! $chance) {
       next PEAK_CALLING;
@@ -312,7 +312,7 @@ sub _divergence_values {
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
-    my $chance = $peak_calling->fetch_Chance;
+    my $chance = $peak_calling->get_Chance;
     
     if (! $chance) {
       next PEAK_CALLING;
@@ -346,7 +346,7 @@ sub _sqrt_divergence_values {
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
-    my $chance = $peak_calling->fetch_Chance;
+    my $chance = $peak_calling->get_Chance;
     
     if (! $chance) {
       next PEAK_CALLING;

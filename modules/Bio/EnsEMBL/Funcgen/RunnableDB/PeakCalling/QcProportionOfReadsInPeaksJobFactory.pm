@@ -43,9 +43,9 @@ sub run {
   my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
   my $default_assembly = $default_chromosome_coordsystem->version;
   
-  my $signal_alignment = $peak_calling->fetch_signal_Alignment;
+  my $signal_alignment = $peak_calling->get_signal_Alignment;
   
-  my $signal_bam_data_file = $signal_alignment->fetch_bam_DataFile;
+  my $signal_bam_data_file = $signal_alignment->get_bam_DataFile;
   my $signal_bam_file_name = $signal_bam_data_file->path;
   
   my $signal_bam_file  = $data_root_dir . '/' . $species . '/' . $default_assembly . '/' . $signal_bam_file_name;

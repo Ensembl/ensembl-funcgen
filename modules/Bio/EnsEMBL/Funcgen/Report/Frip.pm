@@ -82,7 +82,7 @@ sub _compute_datasets_with_bin_counts {
               colour  => 'window.chartColors.gray',
             },
 
-            object_filter => sub { return (! shift->fetch_Experiment->get_FeatureType->creates_broad_peaks) }
+            object_filter => sub { return (! shift->get_Experiment->get_FeatureType->creates_broad_peaks) }
         }),
       broad => $self->_compute_dataset_with_bin_counts({
 
@@ -93,7 +93,7 @@ sub _compute_datasets_with_bin_counts {
               colour  => 'window.chartColors.gray',
             },
 
-            object_filter => sub { return shift->fetch_Experiment->get_FeatureType->creates_broad_peaks }
+            object_filter => sub { return shift->get_Experiment->get_FeatureType->creates_broad_peaks }
         }),
     }
   ;
@@ -111,7 +111,7 @@ sub _compute_datasets_with_bin_counts {
             colour  => 'window.chartColors.red',
           },
 
-        object_filter => sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' }
+        object_filter => sub { shift->get_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' }
       }),
       narrow => $self->_compute_dataset_with_bin_counts({
 
@@ -125,8 +125,8 @@ sub _compute_datasets_with_bin_counts {
         object_filter => sub { 
           my $peak_calling = shift;
 
-                  $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' 
-            && (! $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks)
+                  $peak_calling->get_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' 
+            && (! $peak_calling->get_Experiment->get_FeatureType->creates_broad_peaks)
         }
       }),
       broad => $self->_compute_dataset_with_bin_counts({
@@ -141,8 +141,8 @@ sub _compute_datasets_with_bin_counts {
         object_filter => sub { 
           my $peak_calling = shift;
 
-              $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' 
-            && $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks
+              $peak_calling->get_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' 
+            && $peak_calling->get_Experiment->get_FeatureType->creates_broad_peaks
         }
       }),
     }
@@ -161,7 +161,7 @@ sub _compute_datasets_with_bin_counts {
             colour  => 'window.chartColors.blue',
           },
 
-          object_filter => sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'ENCODE' }
+          object_filter => sub { shift->get_Experiment->get_ExperimentalGroup->name eq 'ENCODE' }
       }),
       narrow => $self->_compute_dataset_with_bin_counts({
 
@@ -175,8 +175,8 @@ sub _compute_datasets_with_bin_counts {
           object_filter => sub { 
             my $peak_calling = shift;
             
-                  $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'ENCODE' 
-            && (! $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks)
+                  $peak_calling->get_Experiment->get_ExperimentalGroup->name eq 'ENCODE' 
+            && (! $peak_calling->get_Experiment->get_FeatureType->creates_broad_peaks)
           }
       }),
       broad => $self->_compute_dataset_with_bin_counts({
@@ -191,8 +191,8 @@ sub _compute_datasets_with_bin_counts {
           object_filter => sub { 
             my $peak_calling = shift;
             
-              $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'ENCODE' 
-            && $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks
+              $peak_calling->get_Experiment->get_ExperimentalGroup->name eq 'ENCODE' 
+            && $peak_calling->get_Experiment->get_FeatureType->creates_broad_peaks
           }
       }),
     }
@@ -211,7 +211,7 @@ sub _compute_datasets_with_bin_counts {
             colour  => 'window.chartColors.green',
           },
 
-          object_filter => sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' }
+          object_filter => sub { shift->get_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' }
       }),
       narrow => $self->_compute_dataset_with_bin_counts({
 
@@ -225,8 +225,8 @@ sub _compute_datasets_with_bin_counts {
           object_filter => sub { 
             my $peak_calling = shift;
             
-                  $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' 
-            && (! $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks)
+                  $peak_calling->get_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' 
+            && (! $peak_calling->get_Experiment->get_FeatureType->creates_broad_peaks)
           }
       }),
       broad => $self->_compute_dataset_with_bin_counts({
@@ -241,8 +241,8 @@ sub _compute_datasets_with_bin_counts {
           object_filter => sub { 
             my $peak_calling = shift;
             
-              $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' 
-            && $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks
+              $peak_calling->get_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' 
+            && $peak_calling->get_Experiment->get_FeatureType->creates_broad_peaks
           }
       }),
     }
@@ -261,7 +261,7 @@ sub _compute_values_from_object_list {
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
-    my $frip = $peak_calling->fetch_Frip;
+    my $frip = $peak_calling->get_Frip;
     
     if (! $frip) {
       next PEAK_CALLING;
