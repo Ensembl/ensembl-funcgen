@@ -110,29 +110,23 @@ sub pipeline_analyses {
               db_conn       => 'funcgen:#species#',
               description   => 'All regulatory features should have as many regulatory activities as there are epigenomes in the regulatory build.',
               query         => "
-                select 
-                  regulatory_feature.regulatory_feature_id, 
-                  count(regulatory_activity_id) as num_activities 
-                from 
-                  regulatory_build 
-                  join regulatory_feature on (
-                    regulatory_build.regulatory_build_id = regulatory_feature.regulatory_build_id 
-                    and regulatory_build.is_current = true
-                  ) 
-                  left join regulatory_activity using (regulatory_feature_id) 
-                group by 
-                  regulatory_feature_id 
-                having 
-                  num_activities not in (
-                    select 
-                      count(epigenome_id) 
-                    from 
-                      regulatory_build_epigenome 
-                      join regulatory_build 
-                    where 
-                      is_current = true
-                );
-              ",
+              	select 
+		    regulatory_feature.regulatory_feature_id, 
+		    count(regulatory_activity_id) as num_activities
+		from 
+		   regulatory_build
+		join 
+		   regulatory_feature on (regulatory_build.regulatory_build_id = regulatory_feature.regulatory_build_id and regulatory_build.is_current = 1)
+		join 
+		   regulatory_activity using (regulatory_feature_id)
+		group by 
+		   regulatory_feature_id
+		having 
+		   count(regulatory_activity_id) <> (select count(epigenome_id) 
+							from regulatory_build_epigenome 
+							join regulatory_build using (regulatory_build_id) 
+							where regulatory_build.is_current = 1);
+		",
               expected_size => '0'
             },
         },
