@@ -131,7 +131,7 @@ sub remove_intermediary_bam_files_by_Experiment {
       $logger->info($alignment_with_duplicates->name . " has no bam file.\n");
       next ALIGNMENT;
     }
-    my $bam_file = $alignment_with_duplicates->fetch_bam_DataFile;
+    my $bam_file = $alignment_with_duplicates->get_bam_DataFile;
     
     my $full_file_name = join '/',
       $data_root_dir,

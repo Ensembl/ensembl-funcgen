@@ -120,15 +120,15 @@ sub check_peak_calling {
   my $chance_passed       = 0;
   my $phantom_peak_passed = 0;
   
-  my $broad_peak_calling = $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks;
+  my $broad_peak_calling = $peak_calling->get_Experiment->get_FeatureType->creates_broad_peaks;
   
-  my $frip = $peak_calling->fetch_Frip;
+  my $frip = $peak_calling->get_Frip;
   
   my $frip_threshold = 0.01;
   
   $frip_passed = $frip->frip >= $frip_threshold;
   
-  my $chance = $peak_calling->fetch_Chance;
+  my $chance = $peak_calling->get_Chance;
 
   $logger->info("  Chance:\n");
 
@@ -164,8 +164,8 @@ sub check_peak_calling {
 #       ;
 #   }
 
-  my $signal_alignment = $peak_calling->fetch_signal_Alignment;
-  my $phantom_peak     = $signal_alignment->fetch_PhantomPeak;
+  my $signal_alignment = $peak_calling->get_signal_Alignment;
+  my $phantom_peak     = $signal_alignment->get_PhantomPeak;
 
   $logger->info("  Phantom peaks\n");
 
@@ -216,6 +216,10 @@ sub check_peak_calling {
   }
 
   my $peak_calling_passed = $frip_passed && $chance_passed && $phantom_peak_passed;
+
+  if (!$peak_calling_passed){
+	 $peak_calling_passed = 0;
+  }
 
   $logger->info("    Frip passed         = " . $frip_passed         . "\n");
   $logger->info("    Chance passed       = " . $chance_passed       . "\n");

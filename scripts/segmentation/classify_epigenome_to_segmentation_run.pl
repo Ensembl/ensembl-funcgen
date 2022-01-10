@@ -163,7 +163,13 @@ $funcgen_dba->dbc->do('
 
 ');
 
+$funcgen_dba->dbc->do('
 
+   update segmentation_cell_tables
+     set control_alignment_id = NULL
+   where control_alignment_id = 0
+
+');
 
 $logger->finish_log;
 
@@ -225,6 +231,10 @@ sub generate_sql_callback {
         if (defined $control_alignment) {
           $control_alignment_id = $control_alignment->dbID;
         }
+
+	if (!$control_alignment_id){
+		$control_alignment_id = 0;
+	}
 
         my @values_to_insert = (
             $superclass,
@@ -315,10 +325,9 @@ sub create_segmentation_cell_table {
                 
                 PEAK_CALLING:
                 foreach my $peak_calling (@$peak_callings) {
-                    my $signal_alignment  = $peak_calling->fetch_signal_Alignment;
-                    my $control_alignment = $peak_calling->fetch_control_Alignment;
-                    
-                    my $experiment = $peak_calling->fetch_Experiment;
+                    my $signal_alignment  = $peak_calling->get_signal_Alignment;
+                    my $control_alignment = $peak_calling->get_control_Alignment;
+                    my $experiment = $peak_calling->get_Experiment;
                     my $experimental_group = $experiment->get_ExperimentalGroup;
                     
                     # Include, if the experiment matches the one that is 
@@ -427,7 +436,7 @@ sub fetch_feature_types_for_epigenome {
      } else {
         $peak_callings = $peak_calling_adaptor->fetch_all_by_Epigenome($epigenome);
      }
-    my @feature_types = map { $_->fetch_FeatureType } @$peak_callings;
+    my @feature_types = map { $_->get_FeatureType } @$peak_callings;
     return \@feature_types;
 }
 

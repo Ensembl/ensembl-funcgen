@@ -38,7 +38,6 @@ my $gff_fh = create_file_handle($gff_file);
 
 use Bio::EnsEMBL::Utils::IO::GFFSerializer;
 my $gff_serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
-  $ontology_term_adaptor,
   $gff_fh
 );
 

@@ -819,7 +819,7 @@ sub fetch_metadata {
         next PEAK_CALLING;
       }
   
-      my $feature_type = $peak_calling->fetch_FeatureType;
+      my $feature_type = $peak_calling->get_FeatureType;
       
       my $tf    = $feature_type->name;
       my $class = $feature_type->class;
@@ -829,7 +829,7 @@ sub fetch_metadata {
         next PEAK_CALLING;
       }
     
-      my $epigenome = $peak_calling->fetch_Epigenome;
+      my $epigenome = $peak_calling->get_Epigenome;
       my $cell_short_name = $epigenome->short_name;
 
       my $epigenome_is_excluded =

@@ -164,7 +164,7 @@ $logger->info("In the following epigenomes:\n");
 
 foreach my $peak_calling (@$peak_callings) {
 
-    my $epigenome = $peak_calling->fetch_Epigenome;
+    my $epigenome = $peak_calling->get_Epigenome;
     $logger->info("     " . $epigenome->short_name . "\n");
 
 }
@@ -181,7 +181,7 @@ open my $all_bed_fh, '>', $all_peaks_file or die("Couldn't open $all_peaks_file 
 
 foreach my $peak_calling (@$peak_callings) {
 
-    my $epigenome        = $peak_calling->fetch_Epigenome;
+    my $epigenome        = $peak_calling->get_Epigenome;
     my $export_file      = $export_directory . '/' . $epigenome->production_name . '.bed';
 
     $logger->info("     Writing $feature_type_name peaks for " . $epigenome->short_name . " to $export_file\n");
