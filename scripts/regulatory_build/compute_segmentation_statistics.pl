@@ -362,8 +362,8 @@ sub analyse_data {
   my $skewness = $stat->skewness;
   my $kurtosis = $stat->kurtosis;
   
-  if (! defined $skewness) { $skewness = 'null'; }
-  if (! defined $kurtosis) { $kurtosis = 'null'; }
+  if (! defined $skewness) { $skewness = undef; }
+  if (! defined $kurtosis) { $kurtosis = undef; }
   
   $logger->info("\n");
   $logger->info("    Skewness: " . $skewness . "\n");

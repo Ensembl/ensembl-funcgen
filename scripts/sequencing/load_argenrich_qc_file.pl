@@ -158,7 +158,9 @@ LINE: while (my $current_line = <IN>) {
   my @f = split '=', $current_line;
   next LINE unless(@f == 2);
   
-  $f[1] = 'null' if ($f[1] eq 'NA');
+  $f[1] = undef if ($f[1] eq 'NA');
+  $f[1] = undef if (not defined $f[1]);
+  $f[1] = undef if ($f[1] eq '');
   
   $key_value_pairs{$f[0]} = $f[1];
 }
@@ -183,6 +185,7 @@ my $chance = Bio::EnsEMBL::Funcgen::Chance->new(
   -pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome => $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'},
   -run_failed     => 0,
   -error_message => undef,
+  -path => undef,
 );
 
 my $chance_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'chance');
