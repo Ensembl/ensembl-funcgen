@@ -21,9 +21,17 @@ services:
   - mysql
 
 before_install:
-  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
-  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
-  - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-variation.git
+  - git clone --depth 1 https://github.com/Ensembl/ensembl-git-tools.git
+  - export PATH=$PATH:$PWD/ensembl-git-tools/bin
+  - export ENSEMBL_BRANCH=master
+  - export SECONDARY_BRANCH=main
+  - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH"
+  - if [[ $TRAVIS_BRANCH =~ ^release\/[0-9]+$ ]]; then export ENSEMBL_BRANCH=$TRAVIS_BRANCH; export SECONDARY_BRANCH=$TRAVIS_BRANCH; fi
+  - echo "ENSEMBL_BRANCH=$ENSEMBL_BRANCH"
+  - echo "SECONDARY_BRANCH=$SECONDARY_BRANCH"
+  - git clone --branch $ENSEMBL_BRANCH --secondary_branch $SECONDARY_BRANCH --depth 1 https://github.com/Ensembl/ensembl-test.git
+  - git clone --branch $ENSEMBL_BRANCH --secondary_branch $SECONDARY_BRANCH --depth 1 https://github.com/Ensembl/ensembl.git
+  - git clone --branch $ENSEMBL_BRANCH --secondary_branch $SECONDARY_BRANCH --depth 1 https://github.com/Ensembl/ensembl-variation.git
   - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
   - unzip bioperl-release-1-2-3.zip
 
