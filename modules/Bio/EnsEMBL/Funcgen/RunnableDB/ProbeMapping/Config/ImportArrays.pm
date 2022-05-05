@@ -549,6 +549,7 @@ use vars qw( %Config );
         'GPL7801',
         'GPL9060',
         'GPL9074',
+	'GPL19072',
 
       ],
     },
