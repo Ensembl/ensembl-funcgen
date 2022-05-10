@@ -205,7 +205,7 @@ sub summary_as_hash {
     seq_region_name   => $self->seq_region_name,
     description       => $self->feature_type->description,
     so_accession      => $self->feature_type->so_accession,
-    so_name           => $self->feature_type->so_name,
+    so_term           => $self->feature_type->so_term,
     class             => $self->feature_type->class,
   };
 }
