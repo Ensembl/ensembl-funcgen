@@ -3,3 +3,4 @@
 180509	WCE	DNA	113	Whole Cell Extract	\N	\N	\N
 180537	ELK1	Transcription Factor	\N	ELK1 TF binding	SO:0000235	TF_binding_site	\N
 180573	CEBPB	Transcription Factor	\N	CEBPB TF binding	SO:0000235	TF_binding_site	\N
+178894	Max	Transcription Factor		Max TF binding	SO:0000235	TF_binding_site	

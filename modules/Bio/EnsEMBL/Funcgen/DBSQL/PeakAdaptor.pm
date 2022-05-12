@@ -132,9 +132,11 @@ sub _fetch_overlapping_MotifFeatures {
     }
 
     my $sth = $self->prepare( "
-      SELECT DISTINCT motif_feature_id FROM 
-      motif_feature_peak
-      WHERE peak_id=?
+      SELECT DISTINCT motif_feature_id from motif_feature_regulatory_feature
+      JOIN peak_calling USING(epigenome_id)
+      JOIN peak USING(peak_calling_id)
+      WHERE peak_id=? AND
+      has_matching_Peak = 1
       " );
 
     $sth->execute( $peak->dbID() );
