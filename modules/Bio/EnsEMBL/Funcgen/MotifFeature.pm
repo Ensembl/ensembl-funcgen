@@ -247,6 +247,51 @@ sub feature_so_term {
     return $so_term;
 }
 
+=head2 get_all_overlapping_Peaks
+
+  Example    : my $peaks = $motif_feature->get_all_overlapping_Peaks;
+  Description: Gets all Peaks that overlap with this motif feature
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub get_all_overlapping_Peaks {
+    my $self = shift;
+
+    if ( !$self->{overlapping_Peaks} ) {
+        $self->{overlapping_Peaks} =
+            $self->adaptor()->_fetch_all_overlapping_Peaks($self);
+    }
+
+    return $self->{overlapping_Peaks};
+}
+
+=head2 get_all_overlapping_Peaks_by_Epigenome
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
+  Example    : my $peak =
+             :    $motif_feature->fetch_overlapping_Peak_by_Epigenome($epigenome);
+  Description: Fetches all overlapping Peaks for a particular Epigenome
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Peak objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+  
+=cut
+
+sub get_all_overlapping_Peaks_by_Epigenome {
+    my ($self, $epigenome) = @_;
+
+    my $peaks =
+      $self->adaptor->_fetch_all_overlapping_Peaks_by_Epigenome($self,
+                                                                $epigenome);
+
+    return $peaks;
+}
+
 =head2 get_overlapping_Peak_Callings_by_Epigenome
   Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
   Example    : my $peak_callings =
