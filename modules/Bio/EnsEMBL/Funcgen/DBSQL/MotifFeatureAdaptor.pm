@@ -4,33 +4,55 @@
 #
 
 =head1 LICENSE
+
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 Copyright [2016-2022] EMBL-European Bioinformatics Institute
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
      http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
 =head1 NAME
+
 Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor - A database adaptor for fetching and
 storing MotifFeature objects.
+
 =head1 SYNOPSIS
+
 my $mfa = $db->get_MotifFeatureAdaptor();
+
 my @mfeatures = @{$mfa->fetch_all_by_Slice_Epigenome($slic, $epigenome)};
+
+
 =head1 DESCRIPTION
+
 The MotifFeatureAdaptor is a database adaptor for storing and retrieving
 MotifFeature objects.
+
+
 =head1 SEE ALSO
+
 Bio::EnsEMBL::Funcgen::MotifFeature
+
+
+
 =head1 CONTACT
+
   Please email comments or questions to the public Ensembl
   developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+
   Questions may also be sent to the Ensembl help desk at
   <http://www.ensembl.org/Help/Contact>.
+
+
 =cut
 
 package Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor;
@@ -83,6 +105,7 @@ my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq
 my $final_clause = $true_final_clause;
 
 =head2 fetch_all_by_Slice_BindingMatrix
+
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2]    : Bio::EnsEMBL::Funcgen::BindingMatrix
   #Arg [3]    : (optional) string - type e.g. Jaspar/Inferred
@@ -93,6 +116,7 @@ my $final_clause = $true_final_clause;
   Exceptions : Throws if BindinMatrix is not valid
   Caller     : General
   Status     : At Risk - implement/change type to Analysis
+
 =cut
 
 sub fetch_all_by_Slice_BindingMatrix {
@@ -111,6 +135,7 @@ sub fetch_all_by_Slice_BindingMatrix {
 }
 
 =head2 fetch_all_by_BindingMatrix
+
   Arg [1]    : Bio::EnsEMBL::Funcgen::BindingMatrix
   Example    : my $features = $mfa->fetch_all_by_BindingMatrix($bm);
   Description: Retrieves a list of motif features specific for a given BindingMatrix.
@@ -118,6 +143,7 @@ sub fetch_all_by_Slice_BindingMatrix {
   Exceptions : Throws if BindinMatrix is not valid
   Caller     : General
   Status     : At Risk
+
 =cut
 
 sub fetch_all_by_BindingMatrix {
@@ -190,6 +216,7 @@ sub _generic_fetch_Iterator {
 }
 
 =head2 _fetch_all_overlapping_Peaks
+
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Example    : None
   Description: Fetches all overlapping Peaks for a particular MotifFeature
@@ -197,6 +224,7 @@ sub _generic_fetch_Iterator {
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
+
 =cut
 
 sub _fetch_all_overlapping_Peaks {
@@ -225,6 +253,7 @@ sub _fetch_all_overlapping_Peaks {
 }
 
 =head2 _fetch_all_overlapping_Peaks_by_Epigenome
+
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome
   Example    : None
@@ -234,6 +263,7 @@ sub _fetch_all_overlapping_Peaks {
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
+
 =cut
 
 sub _fetch_all_overlapping_Peaks_by_Epigenome {
@@ -410,6 +440,7 @@ sub _fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature {
 }
 
 =head2 _final_clause
+
   Args       : None
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
@@ -420,6 +451,7 @@ sub _fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature {
   Exceptions : None
   Caller     : generic_fetch
   Status     : At Risk
+
 =cut
 
 sub _final_clause {
@@ -428,6 +460,7 @@ sub _final_clause {
 
 
 =head2 _true_tables
+
   Args       : None
   Example    : None
   Description: Returns the names and aliases of the tables to use for queries.
@@ -435,6 +468,7 @@ sub _final_clause {
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
+
 =cut
 
 sub _true_tables {
@@ -442,6 +476,7 @@ sub _true_tables {
 }
 
 =head2 _columns
+
   Args       : None
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
@@ -450,6 +485,7 @@ sub _true_tables {
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
+
 =cut
 
 sub _columns {
@@ -464,6 +500,7 @@ sub _columns {
 
 
 =head2 _objs_from_sth
+
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
@@ -473,6 +510,7 @@ sub _columns {
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
+
 =cut
 
 sub _objs_from_sth {
@@ -531,6 +569,7 @@ sub _objs_from_sth {
 
 
 =head2 store
+
   Args       : List of Bio::EnsEMBL::Funcgen::MotifFeature objects
   Example    : $ofa->store(@features);
   Description: Stores given MotifFeature objects in the database. Should only
@@ -541,6 +580,7 @@ sub _objs_from_sth {
                the Analysis, Epigenome and FeatureType objects are not attached or stored
   Caller     : General
   Status     : At Risk
+
 =cut
 
 sub store{
@@ -607,6 +647,7 @@ sub store{
 
 
 =head2 store_associated_Peak
+
   Args[1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Args[2]    : Bio::EnsEMBL::Funcgen::Peak
   Example    : $mfa->store_associated_Peak($mf, $peak);
@@ -615,6 +656,7 @@ sub store{
   Exceptions : Throws if args are not valid, warns if association already exists
   Caller     : General
   Status     : Stable
+
 =cut
 
 sub store_associated_Peak {
@@ -662,6 +704,7 @@ sub store_associated_Peak {
 }
 
 =head2 store_associated_RegulatoryFeature
+
   Args[1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Args[2]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Example    : $mfa->store_associated_RegulatoryFeature($mf, $regulatory_feature);
@@ -670,6 +713,7 @@ sub store_associated_Peak {
   Exceptions : Throws if args are not valid, warns if association already exists
   Caller     : General
   Status     : Stable
+
 =cut
 
 sub store_associated_RegulatoryFeature {
@@ -719,6 +763,7 @@ sub store_associated_RegulatoryFeature {
 }
 
 =head2 fetch_by_stable_id
+
   Arg [1]    : String $stable_id - The stable_id of the motif feature to retrieve
   Example    : my $mf = $mf_adaptor->fetch_by_stable_id($stable_id);
   Description: Retrieves a motif feature via its stable id.
@@ -726,6 +771,7 @@ sub store_associated_RegulatoryFeature {
   Exceptions : none
   Caller     : general
   Status     : Stable
+
 =cut
 
 sub fetch_by_stable_id {

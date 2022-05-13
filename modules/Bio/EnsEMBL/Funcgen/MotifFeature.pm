@@ -279,7 +279,7 @@ sub get_all_overlapping_Peaks {
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
-  
+
 =cut
 
 sub get_all_overlapping_Peaks_by_Epigenome {
