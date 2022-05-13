@@ -9,11 +9,11 @@ The warning also contains instructions on replacing the deprecated method and wh
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
 ### To be removed in EnsEMBL Release 112 ###
-- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::_fetch_all_overlapping_Peaks
-- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::_fetch_all_overlapping_Peaks_by_Epigenome
-- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::store_associated_Peak
-- Bio::EnsEMBL::Funcgen::**MotifFeature**::get_all_overlapping_Peaks
-- Bio::EnsEMBL::Funcgen::**MotifFeature**::get_all_overlapping_Peaks_by_Epigenome
+- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks_by_Epigenome()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*store_associated_Peak()*
+- Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks()*
+- Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks_by_Epigenome()*
 
 ### Removed in EnsEMBL Release 104 ###
  - Bio::EnsEMBL::Funcgen::**FeatureType**::*so_name()*

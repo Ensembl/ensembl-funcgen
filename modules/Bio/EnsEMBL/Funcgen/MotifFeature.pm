@@ -259,14 +259,11 @@ sub feature_so_term {
 =cut
 
 sub get_all_overlapping_Peaks {
-    my $self = shift;
-
-    if ( !$self->{overlapping_Peaks} ) {
-        $self->{overlapping_Peaks} =
-            $self->adaptor()->_fetch_all_overlapping_Peaks($self);
-    }
-
-    return $self->{overlapping_Peaks};
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'MotifFeature::get_all_overlapping_Peaks has '
+      . 'been deprecated and will be removed in release 112.';
+    deprecate($deprecation_message);
+    return;
 }
 
 =head2 get_all_overlapping_Peaks_by_Epigenome
@@ -283,13 +280,11 @@ sub get_all_overlapping_Peaks {
 =cut
 
 sub get_all_overlapping_Peaks_by_Epigenome {
-    my ($self, $epigenome) = @_;
-
-    my $peaks =
-      $self->adaptor->_fetch_all_overlapping_Peaks_by_Epigenome($self,
-                                                                $epigenome);
-
-    return $peaks;
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'MotifFeature::get_all_overlapping_Peaks_by_Epigenome has '
+      . 'been deprecated and will be removed in release 112.';
+    deprecate($deprecation_message);
+    return;
 }
 
 =head2 get_overlapping_Peak_Callings_by_Epigenome
