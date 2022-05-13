@@ -245,12 +245,7 @@ sub validate_user_name {
     my ( $user, $logger ) = @_;
 
     my %valid_user_names = (
-        'ilavidas' => 'ilavidas',
-        'ilias'    => 'ilavidas',
-        'Ilias'    => 'ilavidas',
         'juettema' => 'juettema',
-        'thomas'   => 'juettema',
-        'Thomas'   => 'juettema',
         'jcmarca'  => 'jcmarca',
         'Jose'     => 'jcmarca',
         'jose'     => 'jcmarca',
@@ -260,6 +255,9 @@ sub validate_user_name {
         'durbina'    => 'durbina',
         'david'    => 'durbina',
         'David'    => 'durbina',
+        'plins'    => 'plins',
+        'paulo'    => 'plins',
+        'Paulo'    => 'plins',
     );
 
     if ( exists $valid_user_names{$user} ) {
