@@ -5,12 +5,12 @@
 #	containing the checksums and file names for the directory.
 
 #Parameters: 
-#	[-n]: Optional. It does not overwrite previously existing CHECKSUM files.
+#	[-o]: Optional. Overwrites previously existing CHECKSUM files.
 #	-p path: Mandatory. The path where the script will be creating the CHECKSUM files recursively.
 
 function usage {
 	echo "Parameters:
-		[-n]: Optional. It does not overwrite previously existing CHECKSUM files.
+		[-o]: Optional. Overwrites previously existing CHECKSUM files.
 		-p path: Mandatory. The path where the script will be creating the CHECKSUM files recursively."
 }
 
@@ -27,15 +27,15 @@ function create_checksums {
 
 
 ini_dir=`pwd`
-overwrite=1
-while getopts 'np:' OPTION; do
+overwrite=0
+while getopts 'op:' OPTION; do
   case "$OPTION" in
-    n)
-      overwrite=0;;
+    o)
+      overwrite=1;;
     p)
       path="$OPTARG";;
     ?)
-      echo "script usage: $0 [-n not_overwrite] -p path" >&2
+      echo "script usage: $0 [-o overwrite] -p path" >&2
       usage
       exit 1;;
   esac
