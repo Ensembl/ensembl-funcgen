@@ -621,7 +621,7 @@ sub store{
 
 sub store_associated_Peak {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
-      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peaks has '
+      . 'MotifFeatureAdaptor::store_associated_Peak has '
       . 'been deprecated and will be removed in release 112.';
     deprecate($deprecation_message);
     return;
