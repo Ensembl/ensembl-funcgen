@@ -12,8 +12,10 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks_by_Epigenome()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*store_associated_Peak()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_fetch_overlapping_MotifFeatures()*
 - Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks()*
 - Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks_by_Epigenome()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*get_all_MotifFeatures()*
 
 ### Removed in EnsEMBL Release 104 ###
  - Bio::EnsEMBL::Funcgen::**FeatureType**::*so_name()*

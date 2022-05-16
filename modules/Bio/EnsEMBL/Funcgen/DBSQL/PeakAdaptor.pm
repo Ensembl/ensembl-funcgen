@@ -125,38 +125,11 @@ sub fetch_all_by_Slice_PeakCalling {
 =cut
 
 sub _fetch_overlapping_MotifFeatures {
-    my ( $self, $peak ) = @_;
-
-    if (! defined $peak){
-      throw('Must provide a Peak parameter');
-    }
-
-    my $sth = $self->prepare( "
-      SELECT DISTINCT motif_feature_id from motif_feature_regulatory_feature
-      JOIN peak_calling USING(epigenome_id)
-      JOIN peak USING(peak_calling_id)
-      WHERE peak_id=? AND
-      has_matching_Peak = 1
-      " );
-
-    $sth->execute( $peak->dbID() );
-
-    my @motif_feature_ids;
-
-    while ( my @row = $sth->fetchrow_array ) {
-        push @motif_feature_ids, $row[0];
-    }
-
-    my $motif_feature_adaptor
-        = $self->db->get_adaptor('MotifFeature');
-
-    my @motif_features;
-
-    for my $id (@motif_feature_ids) {
-        push @motif_features, $motif_feature_adaptor->fetch_by_dbID($id);
-    }
-
-    return \@motif_features;
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'PeakAdaptor::_fetch_overlapping_MotifFeatures has '
+      . 'been deprecated and will be removed in release 112.';
+    deprecate($deprecation_message);
+    return;
 }
 
 sub _parse_bed_line {
