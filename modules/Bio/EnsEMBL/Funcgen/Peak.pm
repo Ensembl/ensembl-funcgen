@@ -252,7 +252,7 @@ sub display_id {
 sub get_all_MotifFeatures {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
       . 'Peak::get_all_MotifFeatures has '
-      . 'been deprecated and will be removed in release 112.';
+      . 'been deprecated and will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }

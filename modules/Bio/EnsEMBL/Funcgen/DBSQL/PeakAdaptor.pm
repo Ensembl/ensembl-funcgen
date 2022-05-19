@@ -127,7 +127,7 @@ sub fetch_all_by_Slice_PeakCalling {
 sub _fetch_overlapping_MotifFeatures {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
       . 'PeakAdaptor::_fetch_overlapping_MotifFeatures has '
-      . 'been deprecated and will be removed in release 112.';
+      . 'been deprecated and will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }

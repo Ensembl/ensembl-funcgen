@@ -230,7 +230,7 @@ sub _generic_fetch_Iterator {
 sub _fetch_all_overlapping_Peaks {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
       . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peaks has '
-      . 'been deprecated and will be removed in release 112.';
+      . 'been deprecated and will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }
@@ -252,7 +252,7 @@ sub _fetch_all_overlapping_Peaks {
 sub _fetch_all_overlapping_Peaks_by_Epigenome {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
       . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peaks_by_Epigenome has '
-      . 'been deprecated and will be removed in release 112.';
+      . 'been deprecated and will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }
@@ -622,7 +622,7 @@ sub store{
 sub store_associated_Peak {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
       . 'MotifFeatureAdaptor::store_associated_Peak has '
-      . 'been deprecated and will be removed in release 112.';
+      . 'been deprecated and will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }

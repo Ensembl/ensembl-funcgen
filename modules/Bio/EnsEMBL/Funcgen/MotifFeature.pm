@@ -261,7 +261,7 @@ sub feature_so_term {
 sub get_all_overlapping_Peaks {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
       . 'MotifFeature::get_all_overlapping_Peaks has '
-      . 'been deprecated and will be removed in release 112.';
+      . 'been deprecated and will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }
@@ -282,7 +282,7 @@ sub get_all_overlapping_Peaks {
 sub get_all_overlapping_Peaks_by_Epigenome {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
       . 'MotifFeature::get_all_overlapping_Peaks_by_Epigenome has '
-      . 'been deprecated and will be removed in release 112.';
+      . 'been deprecated and will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }
