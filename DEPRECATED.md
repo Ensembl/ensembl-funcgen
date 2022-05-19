@@ -3,12 +3,9 @@ Ensembl Funcgen Deprecated Methods
 
 This file contains the list of methods, modules and scripts deprecated in the Ensembl Funcgen API.
 A method is deprecated when it is not functional any more (schema/data change) or has been replaced by a better one.
-Backwards compatibility is provided whenever possible.
 When a method is deprecated, a deprecation warning is thrown whenever the method is used.
-The warning also contains instructions on replacing the deprecated method and when it will be removed.
-A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
-### To be removed in EnsEMBL Release 112 ###
+### To be removed in Ensembl Release 109 ###
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks_by_Epigenome()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*store_associated_Peak()*
