@@ -43,6 +43,14 @@ use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::_constructor_parameters has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
   return {
     dbID              => 'dbID',
     adaptor           => 'adaptor',
@@ -67,9 +75,41 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_fetch
 );
 
-sub dbID              { return shift->_generic_get_or_set('dbID',              @_);}
-sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
-sub peak_calling_id   { return shift->_generic_get_or_set('peak_calling_id',   @_);}
+
+sub dbID { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::dbID has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('dbID', @_);
+}
+sub adaptor {
+  
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::adaptor has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('adaptor', @_);
+}
+
+sub peak_calling_id { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::peak_calling_id has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('peak_calling_id', @_);
+}
 
 =head2 summit
 
@@ -82,7 +122,18 @@ sub peak_calling_id   { return shift->_generic_get_or_set('peak_calling_id',   @
   Status     : Stable
 
 =cut
-sub summit            { return shift->_generic_get_or_set('summit',            @_);}
+
+sub summit { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::summit has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('summit', @_);
+}
 
 =head2 score
 
@@ -95,7 +146,18 @@ sub summit            { return shift->_generic_get_or_set('summit',            @
   Status     : Stable
 
 =cut
-sub score             { return shift->_generic_get_or_set('score',             @_);}
+
+sub score { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::score has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('score', @_);
+}
 
 =head2 start
 
@@ -108,7 +170,17 @@ sub score             { return shift->_generic_get_or_set('score',             @
   Status     : Stable
 
 =cut
-sub start             { return shift->_generic_get_or_set('start',             @_);}
+sub start { 
+  
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::start has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+  
+  return shift->_generic_get_or_set('start', @_);
+}
 
 =head2 end
 
@@ -120,12 +192,77 @@ sub start             { return shift->_generic_get_or_set('start',             @
   Status     : Stable
 
 =cut
-sub end               { return shift->_generic_get_or_set('end',               @_);}
-sub seq_region_id     { return shift->_generic_get_or_set('seq_region_id',     @_);}
-sub seq_region_start  { return shift->_generic_get_or_set('seq_region_start',  @_);}
-sub seq_region_end    { return shift->_generic_get_or_set('seq_region_end',    @_);}
-sub seq_region_strand { return shift->_generic_get_or_set('seq_region_strand', @_);}
-sub strand            { return shift->_generic_get_or_set('strand',            @_);}
+sub end { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::end has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('end', @_);
+}
+sub seq_region_id { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::seq_region_id has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('seq_region_id', @_);
+}
+sub seq_region_start { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::seq_region_start has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
+  return shift->_generic_get_or_set('seq_region_start', @_);
+}
+
+
+sub seq_region_end    { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::seq_region_end has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+  
+  return shift->_generic_get_or_set('seq_region_end',    @_);
+  
+}
+
+sub seq_region_strand { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::seq_region_strand has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);   
+  
+  return shift->_generic_get_or_set('seq_region_strand', @_);
+}
+
+sub strand {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::strand has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message); 
+
+  return shift->_generic_get_or_set('strand', @_);
+}
 
 =head2 slice
 
@@ -138,6 +275,14 @@ sub strand            { return shift->_generic_get_or_set('strand',            @
 
 =cut
 sub slice { 
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::slice has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
   my $self  = shift;
   my $slice = shift;
   
@@ -160,6 +305,14 @@ sub slice {
 =cut
 
 sub get_PeakCalling {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'Peak::get_PeakCalling has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
+
     return shift->_generic_fetch('peak_calling', 'get_PeakCallingAdaptor', 'peak_calling_id');
 }
 
@@ -177,6 +330,14 @@ sub get_PeakCalling {
 =cut
 
 sub set_PeakCalling {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'Peak::set_PeakCalling has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+      . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
   my $self = shift;
   my $peak_calling = shift;
   
@@ -197,6 +358,14 @@ sub set_PeakCalling {
 =cut
 
 sub display_label {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'Peak::display_label has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
+    
     my $self = shift;
 
     #auto generate here if not set in table
@@ -226,6 +395,14 @@ sub display_label {
 =cut
 
 sub display_id {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'Peak::display_id has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
+
     my $self = shift;
     my $peak_calling = $self->get_PeakCalling;
 
@@ -252,12 +429,22 @@ sub display_id {
 sub get_all_MotifFeatures {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
       . 'Peak::get_all_MotifFeatures has '
-      . 'been deprecated and will be removed in release 109.';
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+      . 'They will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }
 
 sub seq_region_name {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::seq_region_name has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
   my $self = shift;
   my $slice = $self->slice;
   return $slice->seq_region_name;
@@ -273,6 +460,14 @@ sub seq_region_name {
 =cut
 
 sub feature_so_acc {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::feature_so_acc has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+  
   my $self = shift;
   return $self->get_PeakCalling->get_FeatureType->so_accession;
 }
@@ -287,6 +482,14 @@ sub feature_so_acc {
 =cut
 
 sub feature_so_term {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::feature_so_term has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
   my $self = shift;
   return $self->get_PeakCalling->get_FeatureType->so_term;
 }
@@ -301,6 +504,14 @@ sub feature_so_term {
 =cut
 
 sub summary_as_hash {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+    . 'Peak::summary_as_hash has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
+
   my $self = shift;
   my $peak_calling = $self->get_PeakCalling;
   my $slice = $self->slice;

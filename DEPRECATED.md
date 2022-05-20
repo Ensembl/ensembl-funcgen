@@ -6,13 +6,43 @@ A method is deprecated when it is not functional any more (schema/data change) o
 When a method is deprecated, a deprecation warning is thrown whenever the method is used.
 
 ### To be removed in Ensembl Release 109 ###
+- Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks()*
+- Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks_by_Epigenome()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peaks_by_Epigenome()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*store_associated_Peak()*
-- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_fetch_overlapping_MotifFeatures()*
-- Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks()*
-- Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks_by_Epigenome()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*_constructor_parameters()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*dbID()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*adaptor()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*peak_calling_id()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*summit()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*score()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*start()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*end()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*seq_region_id()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*seq_region_start()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*seq_region_end()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*seq_region_strand()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*strand()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*slice()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*get_PeakCalling()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*set_PeakCalling()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*display_label()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*display_id()*
 - Bio::EnsEMBL::Funcgen::**Peak**::*get_all_MotifFeatures()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*seq_region_name()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*feature_so_acc()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*feature_so_term()*
+- Bio::EnsEMBL::Funcgen::**Peak**::*summary_as_hash()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*object_class()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_tables()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*insertion_method()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_columns()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*fetch_all_by_PeakCalling()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*fetch_all_by_Slice_PeakCalling()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_fetch_overlapping_MotifFeatures()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_parse_bed_line()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_bulk_export_to_bed_by_PeakCalling()*
 
 ### Removed in EnsEMBL Release 104 ###
  - Bio::EnsEMBL::Funcgen::**FeatureType**::*so_name()*
