@@ -1,1 +1,2 @@
 1	The Ensembl Regulatory Build	97	The Ensembl Regulatory Build updated for release 97	1.0	2019-4	2019-4	19	16	1	9
+2	Regulatory build 107	107	Human Regulatory build release 107	1.0	2021-11	2021-11	19	16	1	621187;

@@ -250,12 +250,11 @@ sub display_id {
 =cut
 
 sub get_all_MotifFeatures {
-    my $self = shift;
-
-    my $motif_features
-        = $self->adaptor()->_fetch_overlapping_MotifFeatures( $self );
-
-    return $motif_features;
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'Peak::get_all_MotifFeatures has '
+      . 'been deprecated and will be removed in release 109.';
+    deprecate($deprecation_message);
+    return;
 }
 
 sub seq_region_name {
