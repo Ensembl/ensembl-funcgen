@@ -38,20 +38,53 @@ use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericFeatureAdaptor';
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Scalar qw( assert_ref );
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 
 sub object_class {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'PeakAdaptor::object_class has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
+
     return 'Bio::EnsEMBL::Funcgen::Peak';
 }
 
 sub _tables {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'PeakAdaptor::_tables has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
+
   return ['peak', 'p']
 }
 
 sub insertion_method {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'PeakAdaptor::insertion_method has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
+
     return 'insert ignore'
 }
 
 sub _columns {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'PeakAdaptor::_columns has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
+
   return qw(
     p.peak_id               p.seq_region_id
     p.seq_region_start      p.seq_region_end
@@ -73,6 +106,13 @@ sub _columns {
 =cut
 
 sub fetch_all_by_PeakCalling {
+
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'PeakAdaptor::fetch_all_by_PeakCalling has '
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+      . 'They will be removed in release 109.';
+    deprecate($deprecation_message);
 
     my $self         = shift;
     my $peak_calling = shift;
@@ -98,6 +138,13 @@ sub fetch_all_by_PeakCalling {
 =cut
 
 sub fetch_all_by_Slice_PeakCalling {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+    . 'PeakAdaptor::fetch_all_by_Slice_PeakCalling has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
 
   my $self         = shift;
   my $slice        = shift;
@@ -127,12 +174,21 @@ sub fetch_all_by_Slice_PeakCalling {
 sub _fetch_overlapping_MotifFeatures {
     my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
       . 'PeakAdaptor::_fetch_overlapping_MotifFeatures has '
-      . 'been deprecated and will be removed in release 109.';
+      . 'been deprecated along with the ' 
+      . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+      . 'They will be removed in release 109.';
     deprecate($deprecation_message);
     return;
 }
 
 sub _parse_bed_line {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+    . 'PeakAdaptor::_parse_bed_line has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
 
   my $self     = shift;
   my $bed_line = shift;
@@ -158,6 +214,13 @@ sub _parse_bed_line {
 }
 
 sub _bulk_export_to_bed_by_PeakCalling {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+    . 'PeakAdaptor::_bulk_export_to_bed_by_PeakCalling has '
+    . 'been deprecated along with the ' 
+    . 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor module. ' 
+    . 'They will be removed in release 109.';
+  deprecate($deprecation_message);
 
   my $self = shift;
   my $peak_calling = shift;
