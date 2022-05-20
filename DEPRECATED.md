@@ -44,7 +44,6 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 - Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_parse_bed_line()*
 - Bio::EnsEMBL::Funcgen::DBSQL::**PeakAdaptor**::*_bulk_export_to_bed_by_PeakCalling()*
 
-
 ### Removed in EnsEMBL Release 104 ###
  - Bio::EnsEMBL::Funcgen::**FeatureType**::*so_name()*
  - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Analysis()*
