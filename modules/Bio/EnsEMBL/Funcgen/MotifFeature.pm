@@ -259,14 +259,11 @@ sub feature_so_term {
 =cut
 
 sub get_all_overlapping_Peaks {
-    my $self = shift;
-
-    if ( !$self->{overlapping_Peaks} ) {
-        $self->{overlapping_Peaks} =
-            $self->adaptor()->_fetch_all_overlapping_Peaks($self);
-    }
-
-    return $self->{overlapping_Peaks};
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'MotifFeature::get_all_overlapping_Peaks has '
+      . 'been deprecated and will be removed in release 109.';
+    deprecate($deprecation_message);
+    return;
 }
 
 =head2 get_all_overlapping_Peaks_by_Epigenome
@@ -283,13 +280,53 @@ sub get_all_overlapping_Peaks {
 =cut
 
 sub get_all_overlapping_Peaks_by_Epigenome {
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'MotifFeature::get_all_overlapping_Peaks_by_Epigenome has '
+      . 'been deprecated and will be removed in release 109.';
+    deprecate($deprecation_message);
+    return;
+}
+
+=head2 get_overlapping_Peak_Callings_by_Epigenome
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
+  Example    : my $peak_callings =
+             :    $motif_feature->fetch_overlapping_Peak_by_Epigenome($epigenome);
+  Description: Fetches all overlapping Peak Callings for a particular Epigenome
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::PeakCalling objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+=cut
+
+sub get_overlapping_Peak_Callings_by_Epigenome {
     my ($self, $epigenome) = @_;
 
-    my $peaks =
-      $self->adaptor->_fetch_all_overlapping_Peaks_by_Epigenome($self,
-                                                                $epigenome);
+    my $peak_callings =
+      $self->adaptor->_fetch_all_overlapping_Peak_Callings_by_Epigenome($self,
+                                                                        $epigenome);
+    return $peak_callings;
+}
 
-    return $peaks;
+=head2 get_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
+  Arg [2]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature object
+  Example    : my $peak_callings =
+             :    $motif_feature->fetch_overlapping_Peak_by_Epigenome_and_Regulatory_Feature($epigenome, $regulatory_feature);
+  Description: Fetches all overlapping Peak Callings for a particular Epigenome and RegulatoryFeature
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::PeakCalling objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+=cut
+
+sub get_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature {
+    my ($self, $epigenome, $regulatory_feature) = @_;
+   
+    my $peak_callings =
+      $self->adaptor->_fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature($self,
+                                                                                               $epigenome,
+                                                                                               $regulatory_feature);
+    return $peak_callings;
 }
 
 =head2 is_experimentally_verified_in_Epigenome
@@ -311,9 +348,9 @@ sub is_experimentally_verified_in_Epigenome {
 
     my $is_experimentally_verified = 0;
 
-    my $peaks = $self->get_all_overlapping_Peaks_by_Epigenome($epigenome);
+    my $peak_callings = $self->get_overlapping_Peak_Callings_by_Epigenome($epigenome);
 
-    if (scalar @{$peaks} > 0){
+    if (scalar @{$peak_callings} > 0){
         $is_experimentally_verified = 1;
     }
 
@@ -335,15 +372,7 @@ sub is_experimentally_verified_in_Epigenome {
 
 sub get_all_Epigenomes_with_experimental_evidence {
   my $self = shift;
-  my $peaks = $self->get_all_overlapping_Peaks;
-  my %epigenome_dbIDs;
-  for my $peak (@{$peaks}){
-    $epigenome_dbIDs{$peak->get_PeakCalling->epigenome_id} = 1;
-  }
-
-  my $epigenome_adaptor = $self->adaptor->db->get_adaptor('Epigenome');
-  my @dbID_list = keys %epigenome_dbIDs;
-  my $epigenomes = $epigenome_adaptor->fetch_all_by_dbID_list(\@dbID_list);
+  my $epigenomes = $self->adaptor()->_fetch_all_overlapping_Epigenomes($self);
   return $epigenomes;
 }
 

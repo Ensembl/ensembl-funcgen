@@ -94,7 +94,7 @@ sub define_expected :Test(setup) {
             . "7\t1312\t107\t677\t397\t2\t509\t\n523\t444\t90\t1312\t1312\t"
             . "36\t31\t676\t4\t177\t1312\t78\t1312\t12\t12\t19\t273\t\n365\t"
             . "91\t26\t14\t8\t71\t454\t16\t1312\t1312\t164\t261\t64\t635\t"
-            . "22\t11\t431\t\n";
+            . "22\t11\t43\t\n";
 
     my $elements = {
         '1'  => {
@@ -195,7 +195,7 @@ sub define_expected :Test(setup) {
         },
         '17' => {
             'C' => '509',
-            'T' => '431',
+            'T' => '43',
             'G' => '273',
             'A' => '98'
         }
@@ -206,7 +206,7 @@ sub define_expected :Test(setup) {
         'elements_string'         => $elements_string,
         'TFC_name'                => 'ETV2::CEBPD',
         'number_of_TFCs'          => 7,
-        'sim_score'               => 21.03,
+        'sim_score'               => 21.54,
         'rel_sim_score'           => 0.97,
         'is_position_informative' => 0,
         'unit'                    => FREQUENCIES

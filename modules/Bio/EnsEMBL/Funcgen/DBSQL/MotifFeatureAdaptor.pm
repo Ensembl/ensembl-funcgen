@@ -228,28 +228,11 @@ sub _generic_fetch_Iterator {
 =cut
 
 sub _fetch_all_overlapping_Peaks {
-    my ( $self, $motif_feature ) = @_;
-
-    if (! defined $motif_feature){
-      throw('Must provide a MotifFeature parameter');
-    }
-
-    my $sth = $self->prepare( "
-      SELECT peak_id FROM motif_feature_peak
-      WHERE motif_feature_id=?
-      " );
-
-    $sth->execute( $motif_feature->dbID() );
-
-    my @peaks;
-
-    my $peak_adaptor = $self->db->get_adaptor('Peak');
-
-    while ( my @row = $sth->fetchrow_array ) {
-        push @peaks, $peak_adaptor->fetch_by_dbID($row[0]);
-    }
-
-    return \@peaks;
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peaks has '
+      . 'been deprecated and will be removed in release 109.';
+    deprecate($deprecation_message);
+    return;
 }
 
 =head2 _fetch_all_overlapping_Peaks_by_Epigenome
@@ -267,7 +250,73 @@ sub _fetch_all_overlapping_Peaks {
 =cut
 
 sub _fetch_all_overlapping_Peaks_by_Epigenome {
-    my ( $self, $motif_feature, $epigenome ) = @_;
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peaks_by_Epigenome has '
+      . 'been deprecated and will be removed in release 109.';
+    deprecate($deprecation_message);
+    return;
+}
+
+=head2 _fetch_all_overlapping_Epigenomes
+  
+  Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
+  Description: Fetches list of overlapping Epigenomes
+             : for a particular MotifFeature
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Epigenome objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _fetch_all_overlapping_Epigenomes {
+
+  my ( $self, $motif_feature) = @_;
+
+    if (! defined $motif_feature){
+      throw('Must provide a MotifFeature parameter');
+    }
+
+    my $sth = $self->prepare( "
+      SELECT DISTINCT epigenome_id FROM motif_feature_regulatory_feature
+      WHERE motif_feature_id=?
+      AND has_matching_Peak = 1
+      ORDER BY epigenome_id
+      " );
+
+    $sth->execute( $motif_feature->dbID());
+
+    my @epigenome_dbIDs;
+
+    my $epigenome_adaptor = $self->db->get_adaptor('Epigenome');
+
+    while ( my @row = $sth->fetchrow_array ) {
+        push @epigenome_dbIDs, $row[0];
+    }
+
+    my $epigenomes = $epigenome_adaptor->fetch_all_by_dbID_list(\@epigenome_dbIDs);
+
+    return $epigenomes;
+
+}
+
+=head2 _fetch_all_overlapping_Peak_Callings_by_Epigenome
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome
+  Example    : None
+  Description: Fetches list of overlapping peak callings
+             : for a particular MotifFeature, Epigenome
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::PeakCalling objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _fetch_all_overlapping_Peak_Callings_by_Epigenome {
+
+  my ( $self, $motif_feature, $epigenome ) = @_;
 
     if (! defined $motif_feature){
       throw('Must provide a MotifFeature parameter');
@@ -277,24 +326,77 @@ sub _fetch_all_overlapping_Peaks_by_Epigenome {
       throw('Must provide an Epigenome parameter');
     }
 
-    my $sth = $self->prepare( "
-      SELECT peak_id FROM motif_feature_peak
-      JOIN peak USING (peak_id)
-      JOIN peak_calling USING (peak_calling_id)
+    my $sth = $self->prepare("
+      SELECT peak_calling_id FROM motif_feature_regulatory_feature
+      JOIN peak_calling USING (epigenome_id)
       WHERE motif_feature_id=? AND epigenome_id=?
+      AND has_matching_Peak = 1
       " );
+    
+    $sth->execute($motif_feature->dbID(), $epigenome->dbID());
+    
+    my @peak_callings;
 
-    $sth->execute( $motif_feature->dbID(), $epigenome->dbID() );
-
-    my @peaks;
-
-    my $peak_adaptor = $self->db->get_adaptor('Peak');
-
+    my $peak_calling_adaptor = $self->db->get_adaptor('PeakCalling');
+    
     while ( my @row = $sth->fetchrow_array ) {
-        push @peaks, $peak_adaptor->fetch_by_dbID($row[0]);
+        push @peak_callings, $peak_calling_adaptor->fetch_by_dbID($row[0]);
     }
 
-    return \@peaks;
+    return \@peak_callings;
+
+}
+
+=head2 _fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome
+  Arg [3]    : Bio::EnsEMLB::Funcgen::RegulatoryFeature
+  Example    : None
+  Description: Fetches list of overlapping peak callings
+             : for a particular MotifFeature, Epigenome and RegulatoryFeature
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::PeakCalling objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature {
+
+  my ( $self, $motif_feature, $epigenome, $regulatory_feature ) = @_;
+
+    if (! defined $motif_feature){
+      throw('Must provide a MotifFeature parameter');
+    }
+
+    if (! defined $epigenome){
+      throw('Must provide an Epigenome parameter');
+    }
+
+    if (! defined $regulatory_feature){
+      throw('Must provide a RegulatoryFeature parameter');
+    }
+
+    my $sth = $self->prepare( "
+      SELECT peak_calling_id FROM motif_feature_regulatory_feature
+      JOIN peak_calling USING (epigenome_id)
+      WHERE motif_feature_id=? AND epigenome_id=? AND regulatory_feature_id=?
+      AND has_matching_Peak = 1
+      " );
+
+    $sth->execute( $motif_feature->dbID(), $epigenome->dbID(), $regulatory_feature->dbID());
+
+    my @peak_callings;
+
+    my $peak_calling_adaptor = $self->db->get_adaptor('PeakCalling');
+
+    while ( my @row = $sth->fetchrow_array ) {
+        push @peak_callings, $peak_calling_adaptor->fetch_by_dbID($row[0]);
+    }
+
+    return \@peak_callings;
+
 }
 
 =head2 _final_clause
@@ -518,47 +620,11 @@ sub store{
 =cut
 
 sub store_associated_Peak {
-    my ( $self, $mf, $peak ) = @_;
-
-    $self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::Peak', $peak );
-
-    # Replace provided motif feature with the one which is stored in the db
-    my $existing_motif_feature
-        = $self->fetch_by_BindingMatrix_Slice_start_strand(
-        $mf->get_BindingMatrix(), $mf->slice(), $mf->start(), $mf->strand() );
-    
-    $self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::MotifFeature', $existing_motif_feature );
-    $mf = $existing_motif_feature;
-
-    # Check for existing association
-    my $existing_peak = $mf->fetch_overlapping_Peak;
-    if ( $existing_peak and $existing_peak->dbID == $peak->dbID ) {
-      warn "You are trying to store a pre-existing Peak association";
-      return;
-    }
-
-    # Validate MotifFeature is entirely contained within the Peak
-    if (
-        !(
-               ( $peak->seq_region_start <= $mf->seq_region_start )
-            && ( $mf->seq_region_end <= $peak->seq_region_end )
-        )
-      )
-    {
-        throw('MotifFeature is not entirely contained within associated Peak');
-    }
-
-    my $sth = $self->prepare(
-"INSERT INTO motif_feature_peak (motif_feature_id, peak_id) VALUES (?, ?)"
-    );
-    
-    $sth->bind_param( 1, $mf->dbID,   SQL_INTEGER );
-    $sth->bind_param( 2, $peak->dbID, SQL_INTEGER );
-    $sth->execute();
-
-    # $mf->{associated_Peak} = $peak;
-
-    return $mf;
+    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::store_associated_Peak has '
+      . 'been deprecated and will be removed in release 109.';
+    deprecate($deprecation_message);
+    return;
 }
 
 =head2 store_associated_RegulatoryFeature
