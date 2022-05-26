@@ -123,17 +123,6 @@ sub get_FeatureType {
 }
 
 
-sub get_Idr {
-  my $self = shift;
-
-  my $idr_adaptor = $self->adaptor->db->get_IdrAdaptor;
-  if (! defined $idr_adaptor) {
-    throw("Couldn't get an IdrAdaptor!");
-  }
-  my $idr = $idr_adaptor->_fetch_by_experiment_id($self->experiment_id);
-  return $idr;
-}
-
 =head2 get_EpigenomeTrackStatistic_by_statistic
 
   Arg [1]    : String - statistic to get, available options:
@@ -157,36 +146,6 @@ sub get_EpigenomeTrackStatistic_by_statistic {
   my $epigenome_track_statistic = $epigenome_track_statistic_adaptor->_fetch_by_EpigenomeTrack_statistic($self, $statistic);
   return $epigenome_track_statistic;
 }
-
-sub get_Frip {
-  my $self = shift;
-
-  my $frip_adaptor = $self->adaptor->db->get_FripAdaptor;
-  if (! defined $frip_adaptor) {
-    throw("Couldn't get an IdrAdaptor!");
-  }
-  my $frip = $frip_adaptor->fetch_by_EpigenomeTrack($self);
-  return $frip;
-}
-
-sub get_Chance {
-  my $self = shift;
-
-  my $signal_alignment  = $self->get_signal_Alignment;
-  my $control_alignment = $self->get_control_Alignment;
-
-  my $chance_adaptor = $self->adaptor->db->get_ChanceAdaptor;
-  if (! defined $chance_adaptor) {
-    throw("Couldn't get an ChanceAdaptor!");
-  }
-  my $chance = $chance_adaptor
-    ->fetch_by_signal_control_Alignments(
-      $signal_alignment, 
-      $control_alignment
-    );
-  return $chance;
-}
-
 
 =head2 get_Analysis
 
@@ -229,33 +188,38 @@ sub get_Epigenome {
 
 =cut
 
+=head2 get_DataFile
+
+  Example     : my $data_file = $epigenome_track->get_DataFile;
+  Description : Gets the data file related to the epigenome_track.
+  Returntype  : Bio::EnsEMBL::Funcgen::DataFile
+  Exception   : None
+  Caller      : general
+  Status      : Stable
+
+=cut
+
+sub get_DataFile {
+
+  my $self = shift;
+  return $self->_generic_fetch('data_file', 'get_DataFileAdaptor', 'data_file_id');
+
+}
+
 sub summary_as_hash {
   my $self   = shift;
   
   my $epigenome         = $self->get_Epigenome;
   my $feature_type      = $self->get_FeatureType;
-  my $analysis          = $self->get_Analysis;
-#   my $data_file         = $self->get_DataFile;
-  my $idr               = $self->get_Idr;
+  my $data_file         = $self->get_DataFile;
   
-  my $control_summary;
-  my $control_alignment = $self->get_control_Alignment;
-  if (defined $control_alignment) {
-    $control_summary = $control_alignment ->summary_as_hash;
-  } else {
-    $control_summary = undef;
-  }
   
   my $summary = {
-    epigenome         => $epigenome         ->summary_as_hash,
-    feature_type      => $feature_type      ->summary_as_hash,
-    idr               => $idr               ->summary_as_hash,
+    epigenome         => $epigenome     ->summary_as_hash,
+    feature_type      => $feature_type  ->summary_as_hash,
+    data_file         => $data_file     ->summary_as_hash,
   };
   
-  my $chance = $self->get_Chance;
-  if ($chance) {
-    $summary->{chance} = $chance->summary_as_hash
-  }
   return $summary;
 }
 
