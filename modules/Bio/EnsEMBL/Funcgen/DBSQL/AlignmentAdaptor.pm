@@ -163,4 +163,22 @@ sub fetch_all_with_duplicates_by_Experiment {
     return $self->fetch_all($constraint);
 }
 
+sub fetch_by_DataFile {
+
+  my $self      = shift;
+  my $data_file = shift;
+
+  if (! defined $data_file) {
+    throw("DataFile was undefined");
+  } 
+  
+  my $constraint = join ' or ', (
+      'bam_file_id = ' . $data_file->dbID,
+      'bigwig_file_id = ' . $data_file->dbID
+  );
+
+  return $self->fetch_single_object($constraint);
+
+}
+
 1;
