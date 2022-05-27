@@ -168,7 +168,7 @@ sub _fetch_all_by_constraints {
     }
     if (exists $constraint_hash->{evidence_types}) {
       for my $evidence_type (@{$constraint_hash->{evidence_types}}) {
-        if ($evidence_type eq 'DNase1 & TFBS') {
+        if ($evidence_type eq 'Open chromatin & TFBS') {
           push @constraints, "feature_type_id in (select feature_type_id from feature_type where class in ('Open Chromatin', 'Transcription Factor'))";
         }
         if ($evidence_type eq 'Hists & Pols') {

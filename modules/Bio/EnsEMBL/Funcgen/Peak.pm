@@ -433,7 +433,7 @@ sub get_all_MotifFeatures {
       . 'Bio::EnsEMBL::Funcgen::Peak module. ' 
       . 'They will be removed in release 109.';
     deprecate($deprecation_message);
-    return;
+    return [];
 }
 
 sub seq_region_name {
