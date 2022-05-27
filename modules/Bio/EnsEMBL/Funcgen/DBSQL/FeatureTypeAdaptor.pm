@@ -71,7 +71,7 @@ my %regulatory_evidence_info =
    {
     name      => 'Open chromatin & TFBS',
     long_name => 'Open chromatin & Transcription factor binding sites',
-    label     => 'DNase1 & TFBS',
+    label     => 'Open chromatin & TFBS',
     classes   => ['Open Chromatin',
                   'Transcription Factor',
                   'Transcription Factor Complex'],
