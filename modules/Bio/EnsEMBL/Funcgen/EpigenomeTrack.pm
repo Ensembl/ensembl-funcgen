@@ -91,17 +91,16 @@ sub _constructor_parameters {
    dbID                      => 'dbID',
    adaptor                   => 'adaptor',
    feature_type_id           => 'feature_type_id',
-   analysis_id               => 'analysis_id',
+   track_type                => 'track_type',
    epigenome_id              => 'epigenome_id',
    data_file_id              => 'data_file_id'
   };
 }
 
 sub dbID            { return shift->_generic_get_or_set('dbID',             @_); }
-sub adaptor         {return shift->_generic_get_or_set('adaptor',           @_); }
-sub name            { return shift->_generic_get_or_set('name',             @_); }
+sub adaptor         { return shift->_generic_get_or_set('adaptor',          @_); }
 sub feature_type_id { return shift->_generic_get_or_set('feature_type_id',  @_); }
-sub analysis_id     { return shift->_generic_get_or_set('analysis_id',      @_); }
+sub track_type      { return shift->_generic_get_or_set('track_type',       @_); }
 sub epigenome_id    { return shift->_generic_get_or_set('epigenome_id',     @_); }
 sub data_file_id    { return shift->_generic_get_or_set('data_file_id',     @_); }
 
@@ -122,47 +121,6 @@ sub get_FeatureType {
   return shift->_generic_fetch('feature_type', 'get_FeatureTypeAdaptor', 'feature_type_id');
 }
 
-
-=head2 get_EpigenomeTrackStatistic_by_statistic
-
-  Arg [1]    : String - statistic to get, available options:
-               total_length, average_length, num_peaks
-  Example    : my $statistic = $epigenome_track->get_EpigenomeTrackStatistic_by_statistic;
-  Description: Gets requested statistic for peak calling
-  Returntype : Bio::EnsEMBL::Funcgen::Alignment
-  Exceptions : None
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub get_EpigenomeTrackStatistic_by_statistic {
-  my ($self, $statistic) = @_;
-
-  my $epigenome_track_statistic_adaptor = $self->adaptor->db->get_EpigenomeTrackStatisticAdaptor;
-  if (! defined $epigenome_track_statistic_adaptor) {
-    throw("Couldn't get an EpigenomeTrackStatisticAdaptor!");
-  }
-  my $epigenome_track_statistic = $epigenome_track_statistic_adaptor->_fetch_by_EpigenomeTrack_statistic($self, $statistic);
-  return $epigenome_track_statistic;
-}
-
-=head2 get_Analysis
-
-  Example    : my $analysis = $epigenome_track->get_Analysis;
-  Description: Gets the analysis of the peak calling. This is the analysis
-               representing the peak caller that was used to analyse the
-               alignment.
-  Returntype : Bio::EnsEMBL::Analysis
-  Exceptions : None
-  Caller     : general
-  Status     : Stable
-
-=cut
-sub get_Analysis {
-  return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
-}
-
 =head2 get_Epigenome
 
   Example    : my $epigenome = $epigenome_track->get_Epigenome;
@@ -178,15 +136,6 @@ sub get_Epigenome {
     my $self = shift;
     return $self->_generic_fetch('epigenome', 'get_EpigenomeAdaptor', 'epigenome_id');
 }
-
-=head2 summary_as_hash
-
-  Example       : $summary = $epigenome_track->summary_as_hash;
-  Description   : Returns summary in a hash reference.
-  Returns       : Hashref of descriptive strings
-  Status        : Intended for internal use (REST)
-
-=cut
 
 =head2 get_DataFile
 
@@ -205,6 +154,15 @@ sub get_DataFile {
   return $self->_generic_fetch('data_file', 'get_DataFileAdaptor', 'data_file_id');
 
 }
+
+=head2 summary_as_hash
+
+  Example       : $summary = $epigenome_track->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
 
 sub summary_as_hash {
   my $self   = shift;
