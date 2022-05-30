@@ -1503,6 +1503,31 @@ CREATE TABLE `experimental_group` (
 
 
 /**
+@table  epigenome_track
+@desc   The epigenome tracks for UI.
+@colour  #808000
+
+@column epigenome_track_id   Internal ID
+@column epigenome_id         @link epigenome
+@column feature_type_id      @link feature_type
+@column data_file_id         @link data_file
+@column track_type           Track type i.e. 'peaks', 'signal', etc
+
+*/
+
+DROP TABLE IF EXISTS `epigenome_track`;
+CREATE TABLE `epigenome_track` (
+  `epigenome_track_id` INT(10) unsigned NOT NULL AUTO_INCREMENT,
+  `epigenome_id` INT(10) unsigned NOT NULL,
+  `feature_type_id` INT(10) unsigned NOT NULL,
+  `data_file_id` INT(11) unsigned NOT NULL,
+  `track_type` VARCHAR(50),
+  INDEX et_index ( epigenome_id, feature_type_id ),
+  PRIMARY KEY (epigenome_track_id)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+/**
 @header  Ancilliary tables
 @desc    These contain data types which are used across many of the above tables and
          are quite often denormalised to store generic associations to several table,
