@@ -164,18 +164,24 @@ sub fetch_all_with_duplicates_by_Experiment {
 }
 
 sub fetch_by_DataFile {
-
-  my $self      = shift;
-  my $data_file = shift;
+  my $self           = shift;
+  my $data_file      = shift;
+  my $data_file_type = shift;
 
   if (! defined $data_file) {
     throw("DataFile was undefined");
+  }
+  if (! defined $data_file_type) {
+    throw("Data file type was undefined");
   } 
   
-  my $constraint = join ' or ', (
-      'bam_file_id = ' . $data_file->dbID,
-      'bigwig_file_id = ' . $data_file->dbID
-  );
+  my $constraint = '';
+  if ($data_file_type eq "BAM") {
+    $constraint = 'bam_file_id = ' . $data_file->dbID;
+  }
+  elsif ($data_file_type eq "BIGWIG") {
+    $constraint = 'bigwig_file_id = ' . $data_file->dbID;
+  }
 
   return $self->fetch_single_object($constraint);
 
