@@ -38,6 +38,7 @@ use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use List::Util qw(any);
 
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::Alignment';
@@ -173,6 +174,11 @@ sub fetch_by_DataFile {
   }
   if (! defined $data_file_type) {
     throw("Data file type was undefined");
+  }
+  elsif {
+    if (! any { $_ eq $data_file_type } ('BAM', 'BIGWIG')) {
+      throw("Data file type not supported");
+    }
   } 
   
   my $constraint = '';
