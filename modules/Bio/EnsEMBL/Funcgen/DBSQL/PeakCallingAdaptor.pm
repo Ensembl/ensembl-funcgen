@@ -193,7 +193,7 @@ sub _fetch_feature_set_filter_counts {
       eg.description, 
       eg.is_project, 
       ft.class, 
-      epi.name, 
+      epi.short_name,
       epi.description 
     FROM 
       experimental_group eg, 
