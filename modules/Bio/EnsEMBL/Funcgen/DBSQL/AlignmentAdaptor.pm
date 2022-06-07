@@ -35,10 +35,10 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::DBSQL::AlignmentAdaptor;
 
 use strict;
+use List::Util qw( any );
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use List::Util qw(any);
 
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::Alignment';
@@ -169,18 +169,18 @@ sub fetch_by_DataFile {
   my $data_file      = shift;
   my $data_file_type = shift;
 
+  my @valid_data_file_types = ('BAM', 'BIGWIG');
+
   if (! defined $data_file) {
     throw("DataFile was undefined");
   }
   if (! defined $data_file_type) {
     throw("Data file type was undefined");
   }
-  elsif {
-    if (! any { $_ eq $data_file_type } ('BAM', 'BIGWIG')) {
-      throw("Data file type not supported");
-    }
-  } 
-  
+  if (! any { $_ eq $data_file_type } @valid_data_file_types) {
+    throw("Data file type not supported");
+  }  
+ 
   my $constraint = '';
   if ($data_file_type eq "BAM") {
     $constraint = 'bam_file_id = ' . $data_file->dbID;
