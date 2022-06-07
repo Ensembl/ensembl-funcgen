@@ -35,6 +35,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::DBSQL::AlignmentAdaptor;
 
 use strict;
+use List::Util qw( any );
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
 use Bio::EnsEMBL::Utils::Exception qw( throw );
@@ -161,6 +162,35 @@ sub fetch_all_with_duplicates_by_Experiment {
         'experiment_id  = ' . $experiment->dbID
     );
     return $self->fetch_all($constraint);
+}
+
+sub fetch_by_DataFile {
+  my $self           = shift;
+  my $data_file      = shift;
+  my $data_file_type = shift;
+
+  my @valid_data_file_types = ('BAM', 'BIGWIG');
+
+  if (! defined $data_file) {
+    throw("DataFile was undefined");
+  }
+  if (! defined $data_file_type) {
+    throw("Data file type was undefined");
+  }
+  if (! any { $_ eq $data_file_type } @valid_data_file_types) {
+    throw("Data file type not supported");
+  }  
+ 
+  my $constraint = '';
+  if ($data_file_type eq "BAM") {
+    $constraint = 'bam_file_id = ' . $data_file->dbID;
+  }
+  elsif ($data_file_type eq "BIGWIG") {
+    $constraint = 'bigwig_file_id = ' . $data_file->dbID;
+  }
+
+  return $self->fetch_single_object($constraint);
+
 }
 
 1;

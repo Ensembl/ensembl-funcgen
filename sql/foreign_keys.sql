@@ -257,3 +257,8 @@ ALTER TABLE unmapped_object ADD FOREIGN KEY (analysis_id) REFERENCES analysis(an
 ALTER TABLE unmapped_object ADD FOREIGN KEY (external_db_id) REFERENCES external_db(external_db_id);
 ALTER TABLE unmapped_object ADD FOREIGN KEY (unmapped_reason_id) REFERENCES unmapped_reason(unmapped_reason_id);
 	-- TODO polymorphic association pending
+
+-- epigenome_track
+ALTER TABLE epigenome_track ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
+ALTER TABLE epigenome_track ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
+ALTER TABLE epigenome_track ADD FOREIGN KEY (data_file_id) REFERENCES data_file(data_file_id);

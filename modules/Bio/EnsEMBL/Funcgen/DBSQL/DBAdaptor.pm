@@ -201,6 +201,7 @@ sub get_available_adaptors{
         'DBEntry'                           => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
         'DNAMethylationFile'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
         'Epigenome'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
+        'EpigenomeTrack'                    => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeTrackAdaptor',
         'ExampleFeature'                    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExampleFeatureAdaptor',
         'ExecutionPlan'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::ExecutionPlanAdaptor',
         'Experiment'                        => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
