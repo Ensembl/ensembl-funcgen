@@ -280,21 +280,6 @@ sub pipeline_analyses {
           -rc_name     => '16Gb_job',
       },
         {   -logic_name  => 'load_probe_feature_to_transcript_rejections',
-            -rc_name     => '4Gb_job',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters  => {
-                cmd => 
-                    'load_probeset_to_transcript_rejections.pl '
-                  . ' --registry    #reg_conf#'
-                  . ' --species     #species#'
-                  . ' --analysis_logic_name  probe2transcript'
-                  . ' --probeset_rejections_file ' . $probe_feature_transcript_rejection_file
-            },
-          -flow_into => {
-              MEMLIMIT => 'load_probe_feature_to_transcript_rejections_himem',
-          },
-        },
-        {   -logic_name  => 'load_probe_feature_to_transcript_rejections_himem',
             -rc_name     => '64Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
@@ -306,7 +291,6 @@ sub pipeline_analyses {
                   . ' --probeset_rejections_file ' . $probe_feature_transcript_rejection_file
             },
         },
-
         {   -logic_name  => 'load_probe_feature_to_transcript_assignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name     => '4Gb_job',
