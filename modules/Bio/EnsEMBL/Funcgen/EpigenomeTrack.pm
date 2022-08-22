@@ -155,6 +155,43 @@ sub get_DataFile {
 
 }
 
+=head2 get_source_label
+
+  Example    : my $source_label = $epigenome_track->get_source_label;
+  Description: Gets the name of the experimental group of the experiment
+               that led to this epigenome_track.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_source_label {
+  my $self = shift;
+  my $adaptor = $self->adaptor;
+  my $epigenome_id = $self->epigenome_id;
+  my $feature_type_id = $self->feature_type_id;
+  my $source_label = $adaptor->sql_helper->execute_single_result(
+    -SQL => '
+      select
+        eg.name
+      from
+        experimental_group eg
+        join experiment ex using(experimental_group_id)
+        join epigenome e using(epigenome_id)
+        join feature_type ft using(feature_type_id)
+        join epigenome_track et
+          on ft.feature_type_id = et.feature_type_id
+          and e.epigenome_id = et.epigenome_id
+        where et.epigenome_id = ?
+          and et.feature_type_id = ?
+    ',
+    -PARAMS => [ $epigenome_id, $feature_type_id ],
+  );
+  return $source_label;
+}
+
 =head2 summary_as_hash
 
   Example       : $summary = $epigenome_track->summary_as_hash;
