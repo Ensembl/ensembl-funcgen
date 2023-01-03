@@ -199,3 +199,4 @@
 791	\N	patch	patch_107_108_a.sql|schema_version
 792	\N	patch	patch_107_108_b.sql|New epigenome_track table
 793	\N	patch	patch_108_109_a.sql|schema_version
+794	\N	patch	patch_109_110_a.sql|schema_version
