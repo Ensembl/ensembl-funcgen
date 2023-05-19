@@ -1,4 +1,4 @@
-534	\N	schema_version	110
+534	\N	schema_version	111
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -200,3 +200,4 @@
 792	\N	patch	patch_107_108_b.sql|New epigenome_track table
 793	\N	patch	patch_108_109_a.sql|schema_version
 794	\N	patch	patch_109_110_a.sql|schema_version
+795	\N	patch	patch_110_111_a.sql|schema_version
