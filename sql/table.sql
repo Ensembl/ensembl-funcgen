@@ -1520,7 +1520,7 @@ CREATE TABLE `epigenome_track` (
   `epigenome_track_id` INT(10) unsigned NOT NULL AUTO_INCREMENT,
   `epigenome_id` INT(10) unsigned NOT NULL,
   `feature_type_id` INT(10) unsigned NOT NULL,
-  `data_file_id` INT(11) unsigned NOT NULL,
+  `data_file_id` INT(10) unsigned NOT NULL,
   `track_type` VARCHAR(50),
   INDEX et_index ( epigenome_id, feature_type_id ),
   PRIMARY KEY (epigenome_track_id)
