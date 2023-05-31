@@ -1148,7 +1148,7 @@ CREATE TABLE `alignment_qc_flagstats` (
 
 DROP TABLE IF EXISTS `data_file`;
 CREATE TABLE `data_file` (
-  `data_file_id` int(11) NOT NULL AUTO_INCREMENT,
+  `data_file_id` int(10) NOT NULL AUTO_INCREMENT,
   `table_id` int(10) unsigned NOT NULL,
   `table_name` varchar(32) NOT NULL,
   `path` varchar(255) NOT NULL,
