@@ -13,12 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_111_112_a.sql - fix data_file_id length
-@desc   Update data_file_id in data_file and epigenome_track tables to int(10) unsigned
+@header patch_111_112_a.sql - schema version
+@desc   Update schema_version in meta table to 112
 */
 
-ALTER TABLE data_file MODIFY data_file_id int(10) unsigned;
-ALTER TABLE epigenome_track MODIFY data_file_id int(10) unsigned;
+UPDATE meta SET meta_value='112' WHERE meta_key='schema_version';
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_111_112_a.sql|fix data_file_id length');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_111_112_a.sql|schema_version');
