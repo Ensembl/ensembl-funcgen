@@ -201,3 +201,4 @@
 793	\N	patch	patch_108_109_a.sql|schema_version
 794	\N	patch	patch_109_110_a.sql|schema_version
 795	\N	patch	patch_110_111_a.sql|schema_version
+796	\N	patch	patch_111_112_a.sql|schema_version
