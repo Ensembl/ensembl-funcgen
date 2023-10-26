@@ -18,6 +18,7 @@
 */
 
 ALTER TABLE data_file MODIFY data_file_id int(10) unsigned NOT NULL AUTO_INCREMENT;
+ALTER TABLE epigenome_track MODIFY data_file_id int(10) unsigned NOT NULL;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_111_112_c.sql|set data_file_id to not null auto increment');
