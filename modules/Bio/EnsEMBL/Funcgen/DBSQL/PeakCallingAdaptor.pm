@@ -113,12 +113,6 @@ sub fetch_by_PeakCallingStatistic {
     return $self->fetch_by_dbID($peak_calling_statistic->peak_calling_id);
 }
 
-sub count_peaks_by_PeakCalling {
-  my $self = shift;
-  my $peak_calling = shift;
-  return $self->db->get_PeakAdaptor->count_all('peak_calling_id = ' . $peak_calling->dbID);
-}
-
 sub fetch_all_by_Epigenome_FeatureType {
   my $self = shift;
   

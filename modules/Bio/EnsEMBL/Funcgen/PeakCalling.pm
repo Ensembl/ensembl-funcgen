@@ -319,11 +319,6 @@ sub get_Experiment {
   return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
 }
 
-sub num_peaks {
-  my $self = shift;
-  return $self->adaptor->count_peaks_by_PeakCalling($self);
-}
-
 =head2 get_source_label
 
   Example    : my $source_label = $peak_calling->get_source_label;
