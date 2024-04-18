@@ -1673,7 +1673,7 @@ DROP TABLE IF EXISTS `meta`;
 CREATE TABLE `meta` (
   `meta_id` int(10) NOT NULL AUTO_INCREMENT,
   `species_id` int(10) unsigned DEFAULT '1',
-  `meta_key` varchar(46) NOT NULL,
+  `meta_key` varchar(64) NOT NULL,
   `meta_value` varchar(950) NOT NULL,
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
@@ -1685,9 +1685,9 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'funcgen', NULL);
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '112');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_111_112_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_111_112_b.sql|fix data_file_id length');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '113');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_112_113_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_112_113_b.sql|fix_compatibility_issues');
 
 /**
 @table meta_coord
