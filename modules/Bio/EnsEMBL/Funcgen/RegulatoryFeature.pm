@@ -73,8 +73,6 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
-use feature qw(switch);
-
 
 =head2 new
 
@@ -809,13 +807,11 @@ sub summary_as_hash_2 {
 
   my $description;
   
-  given ( $feature_type->description ) {
-    when (/promoter/) { $description = "promoter"; }
-    when (/enhancer/) { $description = "enhancer"; }
-    when (/CTCF/) { $description = "CTCF_binding_site"; }
-    when (/Transcription factor/) { $description = "TF_binding_site"; }
-    when (/Open chromatin/) { $description = "open_chromatin_region"; }
-  }
+  if ( lc($feature_type->description) =~ /promoter/ ) { $description = "promoter"; }
+  elsif ( lc($feature_type->description) =~ /enhancer/ ) { $description = "enhancer"; }
+  elsif ( lc($feature_type->description) =~ /ctcf/ ) { $description = "CTCF_binding_site"; }
+  elsif ( lc($feature_type->description) =~ /transcription factor/ ) { $description = "TF_binding_site"; }
+  elsif ( lc($feature_type->description) =~ /open chromatin/ ) { $description = "open_chromatin_region"; }
 
   return {
     id                => $self->stable_id,
