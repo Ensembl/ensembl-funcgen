@@ -202,7 +202,7 @@
 794	\N	patch	patch_109_110_a.sql|schema_version
 795	\N	patch	patch_110_111_a.sql|schema_version
 796	\N	patch	patch_111_112_a.sql|schema_version
-796	\N	patch	patch_111_112_b.sql|fix data_file_id length
-796	\N	patch	patch_111_112_c.sql|set data_file_id to not null auto increment
+797	\N	patch	patch_111_112_b.sql|fix data_file_id length
+798	\N	patch	patch_111_112_c.sql|set data_file_id to not null auto increment
 799	\N	patch	patch_112_113_a.sql|schema_version
 800	\N	patch	patch_112_113_b.sql|fix_compatibility_issues
