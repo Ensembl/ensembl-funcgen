@@ -74,7 +74,6 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
-
 =head2 new
 
   Arg [-SLICE]             : Bio::EnsEMBL::Slice - The slice on which this feature is located.
@@ -801,6 +800,32 @@ sub summary_as_hash {
   };
 }
 
-1;
+sub summary_as_hash_2 {
+  my $self   = shift;
+  
+  my $feature_type = $self->feature_type;
 
+  my $description;
+  
+  if ( lc($feature_type->description) =~ /promoter/ ) { $description = "promoter"; }
+  elsif ( lc($feature_type->description) =~ /enhancer/ ) { $description = "enhancer"; }
+  elsif ( lc($feature_type->description) =~ /ctcf/ ) { $description = "CTCF_binding_site"; }
+  elsif ( lc($feature_type->description) =~ /transcription factor/ ) { $description = "TF_binding_site"; }
+  elsif ( lc($feature_type->description) =~ /open chromatin/ ) { $description = "open_chromatin_region"; }
+
+  return {
+    id                => $self->stable_id,
+    source            => 'Ensembl',
+    extended_start    => $self->bound_seq_region_start,
+    extended_end      => $self->bound_seq_region_end,
+    start             => $self->seq_region_start,
+    end               => $self->seq_region_end,
+    strand            => $self->strand,
+    seq_region_name   => $self->seq_region_name,
+    description       => $description,
+    feature_type      => $feature_type->name,
+  };
+}
+
+1;
 
