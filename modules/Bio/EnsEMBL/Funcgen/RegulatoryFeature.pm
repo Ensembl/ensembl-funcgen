@@ -73,6 +73,7 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
+use feature qw(switch);
 
 
 =head2 new
@@ -801,6 +802,34 @@ sub summary_as_hash {
   };
 }
 
-1;
+sub summary_as_hash_2 {
+  my $self   = shift;
+  
+  my $feature_type = $self->feature_type;
 
+  my $description;
+  
+  given ( $feature_type->description ) {
+    when (/promoter/) { $description = "promoter"; }
+    when (/enhancer/) { $description = "enhancer"; }
+    when (/CTCF/) { $description = "CTCF_binding_site"; }
+    when (/Transcription factor/) { $description = "TF_binding_site"; }
+    when (/Open chromatin/) { $description = "open_chromatin_region"; }
+  }
+
+  return {
+    id                => $self->stable_id,
+    source            => 'Ensembl',
+    extended_start    => $self->bound_seq_region_start,
+    extended_end      => $self->bound_seq_region_end,
+    start             => $self->seq_region_start,
+    end               => $self->seq_region_end,
+    strand            => $self->strand,
+    seq_region_name   => $self->seq_region_name,
+    description       => $description,
+    feature_type      => $feature_type->name,
+  };
+}
+
+1;
 
