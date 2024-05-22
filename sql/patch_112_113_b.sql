@@ -17,6 +17,7 @@
 @desc   Fix compatibility issues
 */
 
+ALTER TABLE meta MODIFY meta_value varchar(255) DEFAULT NULL;
 ALTER TABLE meta MODIFY meta_key varchar(64) NOT NULL;
 ALTER TABLE data_file MODIFY data_file_id int(10) NOT NULL AUTO_INCREMENT;
 ALTER TABLE epigenome_track MODIFY data_file_id int(10) unsigned NOT NULL;
