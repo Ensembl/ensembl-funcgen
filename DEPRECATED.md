@@ -5,6 +5,17 @@ This file contains the list of methods, modules and scripts deprecated in the En
 A method is deprecated when it is not functional any more (schema/data change) or has been replaced by a better one.
 When a method is deprecated, a deprecation warning is thrown whenever the method is used.
 
+### To be removed in Ensembl Release 115 ###
+- Bio::EnsEMBL::Funcgen::DBSQL::**PeakCallingAdaptor**::*count_peaks_by_PeakCalling()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Epigenomes()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peak_Callings_by_Epigenome()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*_fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature()*
+- Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*store_associated_RegulatoryFeature()*
+- Bio::EnsEMBL::Funcgen::**MotifFeatureAdaptor**::*get_overlapping_Peak_Callings_by_Epigenome()*
+- Bio::EnsEMBL::Funcgen::**MotifFeatureAdaptor**::*get_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature()*
+- Bio::EnsEMBL::Funcgen::**MotifFeatureAdaptor**::*get_all_Epigenomes_with_experimental_evidence()*
+
+
 ### To be removed in Ensembl Release 109 ###
 - Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks()*
 - Bio::EnsEMBL::Funcgen::**MotifFeature**::*get_all_overlapping_Peaks_by_Epigenome()*
