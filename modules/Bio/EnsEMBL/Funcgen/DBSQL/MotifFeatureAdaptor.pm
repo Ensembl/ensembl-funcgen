@@ -228,6 +228,10 @@ sub _generic_fetch_Iterator {
 =cut
 
 sub _fetch_all_overlapping_Epigenomes {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Epigenomes has '
+      . 'been deprecated and will be removed in release 115.';
+    deprecate($deprecation_message);
 
   my ( $self, $motif_feature) = @_;
 
@@ -273,6 +277,10 @@ sub _fetch_all_overlapping_Epigenomes {
 =cut
 
 sub _fetch_all_overlapping_Peak_Callings_by_Epigenome {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peak_Callings_by_Epigenome has '
+      . 'been deprecated and will be removed in release 115.';
+  deprecate($deprecation_message);
 
   my ( $self, $motif_feature, $epigenome ) = @_;
 
@@ -321,6 +329,12 @@ sub _fetch_all_overlapping_Peak_Callings_by_Epigenome {
 =cut
 
 sub _fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature has '
+      . 'been deprecated and will be removed in release 115.';
+  deprecate($deprecation_message);
+  
 
   my ( $self, $motif_feature, $epigenome, $regulatory_feature ) = @_;
 
@@ -577,7 +591,12 @@ sub store{
 =cut
 
 sub store_associated_RegulatoryFeature {
-	my ( $self, $mf, $regulatory_feature, $epigenome, $has_matching_Peak ) = @_;
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+    . 'MotifFeatureAdaptor::store_associated_RegulatoryFeature has '
+    . 'been deprecated and will be removed in release 115.';
+  deprecate($deprecation_message);
+
+  my ( $self, $mf, $regulatory_feature, $epigenome, $has_matching_Peak ) = @_;
 
 	$self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::RegulatoryFeature', $regulatory_feature );
 	

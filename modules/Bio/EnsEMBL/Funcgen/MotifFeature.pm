@@ -259,6 +259,11 @@ sub feature_so_term {
 =cut
 
 sub get_overlapping_Peak_Callings_by_Epigenome {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'MotifFeature::get_overlapping_Peak_Callings_by_Epigenome has '
+      . 'been deprecated.'
+      . 'It will be removed in release 115.';
+  deprecate($deprecation_message);
     my ($self, $epigenome) = @_;
 
     my $peak_callings =
@@ -280,6 +285,11 @@ sub get_overlapping_Peak_Callings_by_Epigenome {
 =cut
 
 sub get_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'MotifFeature::get_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature has '
+      . 'been deprecated.'
+      . 'It will be removed in release 115.';
+  deprecate($deprecation_message);
     my ($self, $epigenome, $regulatory_feature) = @_;
    
     my $peak_callings =
@@ -331,6 +341,11 @@ sub is_experimentally_verified_in_Epigenome {
 =cut
 
 sub get_all_Epigenomes_with_experimental_evidence {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::'
+      . 'MotifFeature::get_all_Epigenomes_with_experimental_evidence has '
+      . 'been deprecated.'
+      . 'It will be removed in release 115.';
+  deprecate($deprecation_message);
   my $self = shift;
   my $epigenomes = $self->adaptor()->_fetch_all_overlapping_Epigenomes($self);
   return $epigenomes;
