@@ -83,58 +83,58 @@ sub _swarm_resource {
 sub resource_classes {
     my ($self) = @_;
     
-    my $lsf_queue_option = '-q production';
+    my $slurm_queue_option = '--partition=production';
     
     return {
         %{$self->SUPER::resource_classes},
 
-        'default'         => {'LSF' => $lsf_queue_option },
+        'default'         => {'SLURM' => qq($slurm_queue_option --mem=250 --time=72:00:00) },
         '250Mb_job'       => {
-            'LSF'         => [ qq($lsf_queue_option -M250   -R"select[mem>250]   rusage[mem=250]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=250i --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 0.25) ],
         },
         '500Mb_job'       => {
-            'LSF'         => [ qq($lsf_queue_option -M500   -R"select[mem>500]   rusage[mem=500]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=500i --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 0.5) ],
         },
         '1Gb_job'         => {
-            'LSF'         => [ qq($lsf_queue_option -M1000  -R"select[mem>1000]  rusage[mem=1000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=1Gi --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 1 - 0.5) ],
         },
         '2Gb_job'         => {
-            'LSF'         => [ qq($lsf_queue_option -M2000  -R"select[mem>2000]  rusage[mem=2000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=2G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 2 -1) ],
         },
         '4Gb_job'         => {
-            'LSF'         => [ qq($lsf_queue_option -M4000  -R"select[mem>4000]  rusage[mem=4000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=4G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 4 -1) ],
         },
         '8Gb_job'         => {
-            'LSF'         => [ qq($lsf_queue_option -M8000  -R"select[mem>8000]  rusage[mem=8000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=8G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 8 -1) ],
         },
         '16Gb_job'        => {
-            'LSF'         => [ qq($lsf_queue_option -M16000 -R"select[mem>16000] rusage[mem=16000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=16G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 16 -1) ],
         },
         '24Gb_job'        => {
-            'LSF'         => [ qq($lsf_queue_option -M24000 -R"select[mem>24000] rusage[mem=24000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=24G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 24 -1) ],
         },
         '32Gb_job'        => {
-            'LSF'         => [ qq($lsf_queue_option -M32000 -R"select[mem>32000] rusage[mem=32000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=32G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 32 -1) ],
         },
         '48Gb_job'        => {
-            'LSF'         => [ qq($lsf_queue_option -M48000 -R"select[mem>48000] rusage[mem=48000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=48G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 48 -1) ],
         },
         '64Gb_job'        => {
-            'LSF'         => [ qq($lsf_queue_option -M64000 -R"select[mem>64000] rusage[mem=64000]") ],
+            'SLURM'         => [ qq($slurm_queue_option --mem=64G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 64 -1 ) ],
         },
         'parallel_sort'   => { 
-            'LSF'         => [ qq($lsf_queue_option -n 16 -M32000 -R"select[mem>32000] rusage[mem=32000]") ],
+            'SLURM'         => [ qq($slurm_queue_option -n 16 --mem=32G --time=72:00:00) ],
             'DockerSwarm' => [ $self->_swarm_resource(16, 32) ],
         },
     };
