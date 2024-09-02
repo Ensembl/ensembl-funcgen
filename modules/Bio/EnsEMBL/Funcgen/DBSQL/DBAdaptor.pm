@@ -217,7 +217,6 @@ sub get_available_adaptors{
         'MirnaTargetFeature'                => 'Bio::EnsEMBL::Funcgen::DBSQL::MirnaTargetFeatureAdaptor',
         'MotifFeature'                      => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
         'MotifFeatureFile'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureFileAdaptor',
-        'Peak'                              => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor',
         'PeakCalling'                       => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor',
         'PeakCallingStatistic'              => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingStatisticAdaptor',
         'PhantomPeak'                       => 'Bio::EnsEMBL::Funcgen::DBSQL::PhantomPeakAdaptor',
