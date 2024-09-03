@@ -215,48 +215,6 @@ sub _generic_fetch_Iterator {
     });
 }
 
-=head2 _fetch_all_overlapping_Peaks
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
-  Example    : None
-  Description: Fetches all overlapping Peaks for a particular MotifFeature
-  Returntype : Arrayref Bio::EnsEMBL::Funcgen::Peak objects
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-sub _fetch_all_overlapping_Peaks {
-    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
-      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peaks has '
-      . 'been deprecated and will be removed in release 109.';
-    deprecate($deprecation_message);
-    return;
-}
-
-=head2 _fetch_all_overlapping_Peaks_by_Epigenome
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome
-  Example    : None
-  Description: Fetches the overlapping Peaks for a particular
-             : MotifFeature and Epigenome
-  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Peak objects
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-sub _fetch_all_overlapping_Peaks_by_Epigenome {
-    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
-      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peaks_by_Epigenome has '
-      . 'been deprecated and will be removed in release 109.';
-    deprecate($deprecation_message);
-    return;
-}
-
 =head2 _fetch_all_overlapping_Epigenomes
   
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
@@ -270,6 +228,10 @@ sub _fetch_all_overlapping_Peaks_by_Epigenome {
 =cut
 
 sub _fetch_all_overlapping_Epigenomes {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Epigenomes has '
+      . 'been deprecated and will be removed in release 115.';
+    deprecate($deprecation_message);
 
   my ( $self, $motif_feature) = @_;
 
@@ -315,6 +277,10 @@ sub _fetch_all_overlapping_Epigenomes {
 =cut
 
 sub _fetch_all_overlapping_Peak_Callings_by_Epigenome {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peak_Callings_by_Epigenome has '
+      . 'been deprecated and will be removed in release 115.';
+  deprecate($deprecation_message);
 
   my ( $self, $motif_feature, $epigenome ) = @_;
 
@@ -363,6 +329,12 @@ sub _fetch_all_overlapping_Peak_Callings_by_Epigenome {
 =cut
 
 sub _fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature {
+
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'MotifFeatureAdaptor::_fetch_all_overlapping_Peak_Callings_by_Epigenome_and_Regulatory_Feature has '
+      . 'been deprecated and will be removed in release 115.';
+  deprecate($deprecation_message);
+  
 
   my ( $self, $motif_feature, $epigenome, $regulatory_feature ) = @_;
 
@@ -605,28 +577,6 @@ sub store{
   return \@motif_features;
 }
 
-
-=head2 store_associated_Peak
-
-  Args[1]    : Bio::EnsEMBL::Funcgen::MotifFeature
-  Args[2]    : Bio::EnsEMBL::Funcgen::Peak
-  Example    : $mfa->store_associated_Peak($mf, $peak);
-  Description: Store link between TF peaks and MotifFeatures
-  Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
-  Exceptions : Throws if args are not valid, warns if association already exists
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub store_associated_Peak {
-    my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
-      . 'MotifFeatureAdaptor::store_associated_Peak has '
-      . 'been deprecated and will be removed in release 109.';
-    deprecate($deprecation_message);
-    return;
-}
-
 =head2 store_associated_RegulatoryFeature
 
   Args[1]    : Bio::EnsEMBL::Funcgen::MotifFeature
@@ -641,7 +591,12 @@ sub store_associated_Peak {
 =cut
 
 sub store_associated_RegulatoryFeature {
-	my ( $self, $mf, $regulatory_feature, $epigenome, $has_matching_Peak ) = @_;
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+    . 'MotifFeatureAdaptor::store_associated_RegulatoryFeature has '
+    . 'been deprecated and will be removed in release 115.';
+  deprecate($deprecation_message);
+
+  my ( $self, $mf, $regulatory_feature, $epigenome, $has_matching_Peak ) = @_;
 
 	$self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::RegulatoryFeature', $regulatory_feature );
 	

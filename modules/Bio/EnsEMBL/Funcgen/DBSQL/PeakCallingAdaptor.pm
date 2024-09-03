@@ -114,6 +114,11 @@ sub fetch_by_PeakCallingStatistic {
 }
 
 sub count_peaks_by_PeakCalling {
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::DBSQL::'
+      . 'PeakCallingAdaptor::count_peaks_by_PeakCalling has '
+      . 'been deprecated.' 
+      . 'It will be removed in release 115.';
+  deprecate($deprecation_message);
   my $self = shift;
   my $peak_calling = shift;
   return $self->db->get_PeakAdaptor->count_all('peak_calling_id = ' . $peak_calling->dbID);
